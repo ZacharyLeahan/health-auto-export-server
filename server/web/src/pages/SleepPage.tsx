@@ -5,6 +5,7 @@ import TimeRangeSelector from "../components/TimeRangeSelector";
 import SleepMetricCards from "../components/sleep/SleepMetricCards";
 import Hypnogram from "../components/sleep/Hypnogram";
 import SleepHistoryChart from "../components/sleep/SleepHistoryChart";
+import { resolveSessionStages } from "../utils/sleepStages";
 import { daysFromRange, formatDateLabel, type TimeRange } from "../utils/timeRange";
 
 export default function SleepPage() {
@@ -53,15 +54,8 @@ export default function SleepPage() {
   // Most recent session for the summary / hypnogram
   const lastSession = sessions.length > 0 ? sessions[0] : null;
 
-  // Filter stages belonging to the most recent night using session timestamps
   const lastNightStages: SleepStage[] = lastSession
-    ? stages.filter((s) => {
-        const st = new Date(s.StartTime).getTime();
-        return (
-          st >= new Date(lastSession.SleepStart).getTime() &&
-          st < new Date(lastSession.SleepEnd).getTime()
-        );
-      })
+    ? resolveSessionStages(lastSession, stages, lastSession.Awake ?? 0)
     : [];
 
   return (

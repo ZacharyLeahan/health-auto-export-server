@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { SleepSession, SleepStage } from "../../api";
+import { resolveSessionStages } from "../../utils/sleepStages";
 
 const STAGE_COLORS: Record<string, string> = {
   Deep: "#1e3a5f",
@@ -80,16 +81,10 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
       sessionByDate.set(dateKey, idx);
     });
 
-    // Map stages to sessions
-    const sessionsWithStages = sorted.map((session) => {
-      const sessionStart = new Date(session.SleepStart).getTime();
-      const sessionEnd = new Date(session.SleepEnd).getTime();
-      const sessionStages = stages.filter((st) => {
-        const t = new Date(st.StartTime).getTime();
-        return t >= sessionStart && t < sessionEnd;
-      });
-      return { session, stages: sessionStages };
-    });
+    const sessionsWithStages = sorted.map((session) => ({
+      session,
+      stages: resolveSessionStages(session, stages, session.Awake ?? 0),
+    }));
 
     // Generate full date range columns — each day is either a session or empty
     const allDates = generateDateRange(start, end);
@@ -207,13 +202,7 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
                 );
               }
 
-              const { session, stages: sessionStages } = entry;
-              const sleepStart = new Date(session.SleepStart);
-              const sleepEnd = new Date(session.SleepEnd);
-              const startOff = getOffsetHours(sleepStart);
-              const endOff = getOffsetHours(sleepEnd);
-              const topPct = ((startOff - minOffset) / totalRange) * 100;
-              const heightPct = ((endOff - startOff) / totalRange) * 100;
+              const { stages: sessionStages } = entry;
 
               return (
                 <div
@@ -222,7 +211,6 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
                   style={{ minWidth: 0 }}
                 >
                   {showStages && sessionStages.length > 0 ? (
-                    // Render individual stage blocks
                     sessionStages.map((stage, si) => {
                       const stStart = getOffsetHours(new Date(stage.StartTime));
                       const stEnd = getOffsetHours(new Date(stage.EndTime));
@@ -245,21 +233,7 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
                         />
                       );
                     })
-                  ) : (
-                    // Simplified: single bar for the session
-                    <div
-                      className="absolute rounded-[2px]"
-                      style={{
-                        top: `${topPct}%`,
-                        height: `${Math.max(heightPct, 1)}%`,
-                        left: "15%",
-                        right: "15%",
-                        backgroundColor: "#3b82f6",
-                        opacity: 0.6,
-                      }}
-                      title={`${sleepStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })} - ${sleepEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}`}
-                    />
-                  )}
+                  ) : null}
 
                   {/* Date label at bottom */}
                   {showLabel && (

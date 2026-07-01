@@ -121,6 +121,7 @@ export interface SleepSession {
   Core: number;
   Deep: number;
   REM: number;
+  Awake?: number;
   InBed: number;
   SleepStart: string;
   SleepEnd: string;

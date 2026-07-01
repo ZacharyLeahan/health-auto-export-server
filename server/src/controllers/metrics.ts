@@ -127,7 +127,12 @@ export const saveMetrics = async (ingestData: IngestData): Promise<IngestRespons
           return SleepModel.bulkWrite(
             sleepMetrics.map((metric) => ({
               updateOne: {
-                filter: { source: metric.source, date: metric.date },
+                filter: {
+                  source: metric.source,
+                  date: metric.date,
+                  stage: metric.stage ?? null,
+                  endDate: metric.endDate ?? null,
+                },
                 update: { $set: metric },
                 upsert: true,
               },
