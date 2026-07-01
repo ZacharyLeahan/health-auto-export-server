@@ -69,11 +69,13 @@ In order to use this project, you will need:
    - Automation Type: `REST API`
    - URL: `http://your-computer-ip:3001/api/data`
    - Headers: `api-key` `sk-xxx` (write token in `.env`)
-   - Data Type: `Health Metrics` or `Workouts` (create separate automations for each if you want to sync different data types)
+   - Data Type: create one `Health Metrics` automation and one `Workouts` automation
    - Export Format: `JSON`
-   - Aggregate Data: `Enabled` 🟢
-   - Aggregate Interval: `Days` (this can be adjusted according to the level granularity you want when viewing your data)
+   - Export Version: `Version 2`
+   - Workouts: enable `Include Route Data` and `Include Workout Metrics`; set workout metric time grouping to `Minutes`
    - Batch Requests: `Enabled` 🟢
+   - Initial load: run a one-time `Previous 7 Days` export
+   - Ongoing sync: change the period to `Since Last Sync` and schedule it hourly
 5. Tap `Update` in the top navigation bar to save the automation
 6. Use `Manual Export` to select a date range and manually trigger a data export to your computer
 

@@ -28,10 +28,17 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '200mb' }));
+// Initial Health Metrics exports can be several hundred MB. Authenticate before
+// buffering that body, and keep the unusually large limit scoped to ingestion.
+app.use(
+  '/api/data',
+  requireWriteAuth,
+  express.json({ limit: process.env.INGEST_BODY_LIMIT || '512mb' }),
+  ingesterRouter,
+);
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-app.use('/api/data', requireWriteAuth, ingesterRouter);
 app.use('/api/metrics', requireReadAuth, metricsRouter);
 app.use('/api/workouts', requireReadAuth, workoutsRouter);
 
