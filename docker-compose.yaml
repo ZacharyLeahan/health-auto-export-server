@@ -44,6 +44,8 @@ services:
       - MONGO_PASSWORD=${MONGO_PASSWORD}
       - READ_TOKEN=${READ_TOKEN}
       - WRITE_TOKEN=${WRITE_TOKEN}
+      - DASHBOARD_USERNAME=${DASHBOARD_USERNAME}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
     depends_on:
       - hae-mongo
     networks:

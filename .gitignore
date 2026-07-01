@@ -3,5 +3,7 @@ server/dist
 server/.env
 .env
 grafana-data
+server/web/node_modules
+server/web/dist
 
 seed_data/*

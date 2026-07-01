@@ -37,10 +37,10 @@ export interface HeartRateMetric {
 
 export interface SleepMetric {
   date: Date;
-  inBedStart: Date;
-  inBedEnd: Date;
-  sleepStart: Date;
-  sleepEnd: Date;
+  inBedStart?: Date | null;
+  inBedEnd?: Date | null;
+  sleepStart?: Date | null;
+  sleepEnd?: Date | null;
   core: number;
   rem: number;
   deep: number;
@@ -50,6 +50,12 @@ export interface SleepMetric {
   source: string;
   metadata?: Record<string, string>;
 }
+
+const parseOptionalDate = (value: unknown): Date | null => {
+  if (!value) return null;
+  const parsed = new Date(value as string | Date);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 export const mapMetric = (
   metric: MetricData,
@@ -78,21 +84,23 @@ export const mapMetric = (
       }));
     case MetricName.SLEEP_ANALYSIS:
       const sleepData = metric.data as SleepMetric[];
-      return sleepData.map((measurement) => ({
-        date: new Date(measurement.date),
-        inBedStart: new Date(measurement.inBedStart),
-        inBedEnd: new Date(measurement.inBedEnd),
-        sleepStart: new Date(measurement.sleepStart),
-        sleepEnd: new Date(measurement.sleepEnd),
-        core: measurement.core,
-        rem: measurement.rem,
-        deep: measurement.deep,
-        awake: measurement.awake,
-        inBed: measurement.inBed,
-        units: metric.units,
-        source: measurement.source,
-        metadata: measurement.metadata,
-      }));
+      return sleepData
+        .map((measurement) => ({
+          date: new Date(measurement.date),
+          inBedStart: parseOptionalDate(measurement.inBedStart),
+          inBedEnd: parseOptionalDate(measurement.inBedEnd),
+          sleepStart: parseOptionalDate(measurement.sleepStart),
+          sleepEnd: parseOptionalDate(measurement.sleepEnd),
+          core: measurement.core,
+          rem: measurement.rem,
+          deep: measurement.deep,
+          awake: measurement.awake,
+          inBed: measurement.inBed,
+          units: metric.units,
+          source: measurement.source,
+          metadata: measurement.metadata,
+        }))
+        .filter((measurement) => !Number.isNaN(measurement.date.getTime()));
     default:
       const baseData = metric.data as BaseMetric[];
       return baseData.map((measurement) => ({
@@ -152,10 +160,10 @@ HeartRateSchema.index({ date: 1, source: 1 }, { unique: true });
 // Sleep Schema
 const SleepSchema: Schema = new Schema({
   date: { type: Date, required: true },
-  inBedStart: { type: Date, required: true },
-  inBedEnd: { type: Date, required: true },
-  sleepStart: { type: Date, required: true },
-  sleepEnd: { type: Date, required: true },
+  inBedStart: { type: Date, required: false },
+  inBedEnd: { type: Date, required: false },
+  sleepStart: { type: Date, required: false },
+  sleepEnd: { type: Date, required: false },
   core: { type: Number, required: true },
   rem: { type: Number, required: true },
   deep: { type: Number, required: true },

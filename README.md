@@ -4,7 +4,17 @@
 
 ![Health Dashboard](docs/images/hae-grafana-health-metrics.png)
 
-This project provides a web interface for viewing Apple Health data via a web interface using Grafana and a Node.js server.
+This project provides a web interface for viewing Apple Health data via Grafana and a React dashboard, backed by a Node.js server and MongoDB.
+
+## React Dashboard
+
+In addition to Grafana, this fork includes a React dashboard adapted from [FreeReps](https://github.com/meltforce/FreeReps).
+
+- URL: http://localhost:3001/dashboard/
+- Login: `admin` / your `READ_TOKEN` from `.env`
+- Pages: overview, sleep, workouts, metrics, correlations, trends
+
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for attribution.
 
 This project aims to be as beginner-friendly as possible, so if you're just getting started with programming, or consider yourself a "non-technical" person, this is a safe space! Of course, this also serves as a great base for the more seasoned developers to build on.
 
@@ -28,13 +38,17 @@ In order to use this project, you will need:
    - `MONGO_USERNAME`: `admin`
    - `MONGO_PASSWORD`: `mypassword` (set a secure password)
    - `MONGO_DB`: `health-auto-export`
-   - `MONGO_PORT`: `27017`
+   - `READ_TOKEN`: generated read token
+   - `WRITE_TOKEN`: generated write token
+   - `DASHBOARD_USERNAME`: dashboard login username (default `admin`)
+   - `DASHBOARD_PASSWORD`: dashboard login password (defaults to `READ_TOKEN`)
 5. You may need to uncomment [the line](https://github.com/HealthyApps/health-auto-export-server/blob/4163bb5e8aa8d2cdac2a9971c164c0fa46604866/docker-compose.yaml#L24) `user: "0:0"` in `docker-compose.yaml` when running Ubuntu.
 6. Run `docker compose up -d` in your terminal.
-7. Open Grafana in your browser at http://localhost:3000
-8. Login with the default credentials: `admin / admin`
-9. Determine [your computer's local IP address](https://geekflare.com/consumer-tech/find-ip-address-of-windows-linux-mac-and-website/) and note it down
-10. Configure the Health Auto Export app to send data to http://your-computer-ip:3001/api/data as outlined in **Step 3**
+7. Open the React dashboard at http://localhost:3001/dashboard/ (login with `admin` and your `READ_TOKEN`)
+8. Open Grafana in your browser at http://localhost:3000
+9. Login with the default credentials: `admin / admin`
+10. Determine [your computer's local IP address](https://geekflare.com/consumer-tech/find-ip-address-of-windows-linux-mac-and-website/) and note it down
+11. Configure the Health Auto Export app to send data to http://your-computer-ip:3001/api/data as outlined in **Step 3**
 
 ### Step 2: Grafana Setup
 
