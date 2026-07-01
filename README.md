@@ -1,116 +1,333 @@
-# Health Auto Export
+# Health Auto Export Server
 
-## Overview
+Self-hosted Apple Health storage and visualization using
+[Health Auto Export](https://apps.apple.com/us/app/health-auto-export-json-csv/id1115567069),
+Node.js, MongoDB, Docker, and a React dashboard.
 
-![Health Dashboard](docs/images/hae-grafana-health-metrics.png)
-
-This project provides a web interface for viewing Apple Health data via Grafana and a React dashboard, backed by a Node.js server and MongoDB.
-
-## React Dashboard
-
-In addition to Grafana, this fork includes a React dashboard adapted from [FreeReps](https://github.com/meltforce/FreeReps).
-
-- URL: http://localhost:3001/dashboard/
-- Login: `admin` / your `READ_TOKEN` from `.env`
-- Pages: overview, sleep, workouts, metrics, correlations, trends
-
-See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for attribution.
-
-This project aims to be as beginner-friendly as possible, so if you're just getting started with programming, or consider yourself a "non-technical" person, this is a safe space! Of course, this also serves as a great base for the more seasoned developers to build on.
+Health Auto Export sends HealthKit metrics, sleep stages, workouts, and workout
+routes from an iPhone to this server. The server stores the data in MongoDB and
+serves the dashboard at `http://localhost:3001/dashboard/`.
 
 ## Requirements
 
-In order to use this project, you will need:
+- An iPhone with Apple Health data
+- [Health Auto Export](https://apps.apple.com/us/app/health-auto-export-json-csv/id1115567069)
+  with a **Premium subscription or Premium Lifetime license**. Premium is
+  required for automatic background exports to a REST API.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- A computer that the iPhone can reach over the local network
 
-1. The [Health Auto Export](https://apple.co/3iqbU2d) app for iPhone
-2. [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed on your computer
+The official
+[Health Auto Export REST API guide](https://help.healthyapps.dev/en/health-auto-export/automations/rest-api/)
+is useful if the app's labels change in a future release.
 
-## Setup Guide
+## How It Works
 
-### Step 1: Computer Setup
+```text
+Apple Health
+    |
+    | Health Auto Export: two REST API automations
+    | 1. Health Metrics   2. Workouts
+    v
+Node/Express ingestion API
+    |
+    v
+MongoDB persistent volume
+    |
+    v
+React dashboard
+```
 
-1. Download and install Docker Desktop for your platform [here](https://www.docker.com/products/docker-desktop/)
-2. Clone or download this repository to your desired location on your computer
-3. Open a terminal/command prompt in the project folder
-4. Run `sh ./create-env.sh` to create the `.env` file, or create the file manually with the following variables:
-   - `NODE_ENV`: `production`
-   - `MONGO_HOST`: `hae-mongo`
-   - `MONGO_USERNAME`: `admin`
-   - `MONGO_PASSWORD`: `mypassword` (set a secure password)
-   - `MONGO_DB`: `health-auto-export`
-   - `READ_TOKEN`: generated read token
-   - `WRITE_TOKEN`: generated write token
-   - `DASHBOARD_USERNAME`: dashboard login username (default `admin`)
-   - `DASHBOARD_PASSWORD`: dashboard login password (defaults to `READ_TOKEN`)
-5. You may need to uncomment [the line](https://github.com/HealthyApps/health-auto-export-server/blob/4163bb5e8aa8d2cdac2a9971c164c0fa46604866/docker-compose.yaml#L24) `user: "0:0"` in `docker-compose.yaml` when running Ubuntu.
-6. Run `docker compose up -d` in your terminal.
-7. Open the React dashboard at http://localhost:3001/dashboard/ (login with `admin` and your `READ_TOKEN`)
-8. Open Grafana in your browser at http://localhost:3000
-9. Login with the default credentials: `admin / admin`
-10. Determine [your computer's local IP address](https://geekflare.com/consumer-tech/find-ip-address-of-windows-linux-mac-and-website/) and note it down
-11. Configure the Health Auto Export app to send data to http://your-computer-ip:3001/api/data as outlined in **Step 3**
+The two iPhone automations both send JSON to:
 
-### Step 2: Grafana Setup
+```text
+POST http://YOUR-COMPUTER-IP:3001/api/data
+```
 
-1. Configure the Grafana data source by selecting `Administration` in the left sidebar, then search for `Infinity`
-2. Select and install `Infinity` plugin. After installation, select `Add new data source`
-3. Give the data source a name, for example `Health Auto Export`
-4. In the `URL, Headers & Params` section, set the `Base URL` to `http://host.docker.internal:3001`
-   - Add a header with Key: `api-key` and Value: `sk-xxx` (value of `READ_TOKEN` in `.env`)
-5. Select `Save & test` to complete the data source setup
-6. This data source can now be used to create dashboards using the synced data
+Do not use `localhost` in the iPhone app. On the phone, `localhost` means the
+iPhone itself. Use the computer's LAN IP address or another address that is
+reachable from the phone.
 
-### Step 3: iPhone Setup
+## 1. Start the Server
 
-1. Install and open the [Health Auto Export](https://apple.co/3iqbU2d) app on your iPhone
-2. Navigate to the `Automations` tab
-3. Create a new automation
-4. Configure the automation with the following settings:
-   - Automation Type: `REST API`
-   - URL: `http://your-computer-ip:3001/api/data`
-   - Headers: `api-key` `sk-xxx` (write token in `.env`)
-   - Data Type: create one `Health Metrics` automation and one `Workouts` automation
-   - Export Format: `JSON`
-   - Export Version: `Version 2`
-   - Workouts: enable `Include Route Data` and `Include Workout Metrics`; set workout metric time grouping to `Minutes`
-   - Batch Requests: `Enabled` 🟢
-   - Initial load: run a one-time `Previous 7 Days` export
-   - Ongoing sync: change the period to `Since Last Sync` and schedule it hourly
-5. Tap `Update` in the top navigation bar to save the automation
-6. Use `Manual Export` to select a date range and manually trigger a data export to your computer
+Clone the repository and enter its directory:
 
-### Step 4: Viewing Data
+```bash
+git clone https://github.com/ZacharyLeahan/health-auto-export-server.git
+cd health-auto-export-server
+```
 
-1. Open Grafana in your browser at http://localhost:3000
-2. Create a new dashboard or import a pre-configured dashboard as described in **Step 5**
+Create the environment file:
 
-### Step 5: Import Dashboards (Optional)
+```bash
+sh ./create-env.sh
+```
 
-If you are unfamiliar with Grafana, you can import pre-configured dashboards to get started quickly.
+The generated `.env` contains:
 
-1. Navigate to the `Dashboards` tab
-2. Select `New` and then `Import`
-3. Upload the dashboard JSON file from the `dashboard-examples` folder, or copy the JSON into the `Import via dashboard JSON model` text area
-4. You can find a full list of metrics available in [`MetricName.ts`](https://github.com/HealthyApps/health-auto-export-server/blob/4163bb5e8aa8d2cdac2a9971c164c0fa46604866/server/src/models/MetricName.ts#L1). These can be used in the datasource URL in order to fetch each metric from the database.
+```dotenv
+NODE_ENV=production
+MONGO_HOST=hae-mongo
+MONGO_PORT=27017
+MONGO_USERNAME=admin
+MONGO_PASSWORD=replace-with-a-secure-password
+MONGO_DB=health-auto-export
+READ_TOKEN=sk-generated-read-token
+WRITE_TOKEN=sk-generated-write-token
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=replace-with-a-dashboard-password
+```
 
-# Troubleshooting
+Keep `.env` private. The `WRITE_TOKEN` permits ingestion and the `READ_TOKEN`
+permits access to the read API. If `DASHBOARD_PASSWORD` is omitted, the
+dashboard uses `READ_TOKEN` as its password.
 
-If you encounter issues:
+Start MongoDB and the application server:
 
-1. You can use [ChatGPT](https://chatgpt.com/) or [Claude](https://claude.ai/) to help you troubleshoot or fix specific errors
-2. Ensure Docker is running
-3. If you're still stuck, feel free to reach out using the support options below.
+```bash
+docker compose up -d hae-mongo hae-server
+```
 
-## Support
+Check their status and logs:
 
-If you need assistance:
+```bash
+docker compose ps
+docker compose logs -f hae-server
+docker compose logs -f hae-mongo
+```
 
-- Open an issue on GitHub
-- Join the [Discord server](https://discord.gg/PY7urEVDnj)
-- Contact [support](https://healthyapps.dev/contact)
+Open the React dashboard:
+
+```text
+http://localhost:3001/dashboard/
+```
+
+Sign in with `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD`.
+
+## 2. Configure Health Auto Export on iPhone
+
+Create **two separate REST API automations**:
+
+1. `Health Metrics to MongoDB`
+2. `Workouts to MongoDB`
+
+Keeping these separate makes large exports more reliable and lets each data
+type use the correct options.
+
+### Settings Shared by Both Automations
+
+Use these settings for both:
+
+| Setting | Value |
+| --- | --- |
+| Automation Type | `REST API` |
+| URL | `http://YOUR-COMPUTER-IP:3001/api/data` |
+| HTTP header | Key: `api-key`, Value: the `WRITE_TOKEN` from `.env` |
+| Export Format | `JSON` |
+| Export Version | `Version 2` |
+| Batch Requests | **On** |
+| Initial Date Range | `Previous 7 Days` |
+
+Do not add a manual `Content-Type` header; the app sets it for JSON exports.
+
+### Automation 1: Health Metrics
+
+Set:
+
+| Setting | Value |
+| --- | --- |
+| Data Type | `Health Metrics` |
+| Selected Metrics | Select the metrics you want, including Sleep Analysis |
+| Summarize Data | **Off** |
+
+Do **not** enable `Summarize Data`. The dashboard needs individual sleep-stage
+and timestamped metric records; summarized data can remove the detail needed
+for the sleep timeline.
+
+Selecting only metrics that have data in Apple Health reduces export time and
+payload size.
+
+### Automation 2: Workouts
+
+Set:
+
+| Setting | Value |
+| --- | --- |
+| Data Type | `Workouts` |
+| Include Route Data | **On** |
+| Include Workout Metrics | **On** |
+| Workout Metric Time Grouping | `Minutes` |
+
+Routes and workout metrics can create large payloads, which is why Batch
+Requests should remain enabled.
+
+## 3. Initial Seven-Day Sync
+
+The initial import is a one-time backfill. Perform these steps for **both**
+automations:
+
+1. Set Date Range to `Previous 7 Days`.
+2. Save/update the automation.
+3. Run `Manual Export`.
+4. Wait for the export to finish.
+5. Open `View Activity Logs` and confirm the REST requests succeeded.
+6. Check the React dashboard for health metrics, sleep, and workouts.
+
+Run one continuous `Previous 7 Days` export. Do not replace it with separate
+`Today` and `Yesterday` exports. Sleep sessions cross midnight, and splitting
+the range can omit part of a night—for example, the stages between bedtime and
+midnight.
+
+Imports use upserts, so repeating the seven-day export is safe if a request
+fails or a night appears incomplete.
+
+## 4. Switch Both Automations to Since Last Sync
+
+After the one-time seven-day export succeeds, edit **each** automation:
+
+1. Change Date Range from `Previous 7 Days` to `Since Last Sync`.
+2. Choose the desired automatic sync cadence; hourly is a practical default.
+3. Save/update the automation.
+4. Leave `Summarize Data` off for Health Metrics.
+5. Leave Batch Requests on for both automations.
+
+`Since Last Sync` sends data from the previous successful run through the
+current time. This avoids midnight cuts and avoids repeatedly uploading the
+same full day.
+
+For more reliable background runs:
+
+- Enable Background App Refresh for Health Auto Export.
+- Disable Low Power Mode when diagnosing missed runs.
+- Remember that iOS does not allow apps to read HealthKit while the phone is
+  locked, so a scheduled run may occur later than its nominal time.
+- Review each automation's Activity Logs when data appears incomplete.
+
+## Fixing a Missing or Truncated Night
+
+If the dashboard begins a sleep session later than the Apple Health app:
+
+1. Compare the dashboard's **First Recorded Stage** with Apple Health.
+2. Temporarily run a manual, continuous export that covers the entire night,
+   preferably `Previous 7 Days`.
+3. Do not export the night as separate `Today` and `Yesterday` requests.
+4. Confirm success in Health Auto Export's Activity Logs.
+5. Refresh the dashboard.
+6. Return the automation to `Since Last Sync`.
+
+The dashboard can display only records received by the server; it cannot infer
+sleep stages that were omitted from the export.
+
+## Docker and MongoDB Operations
+
+### Start, Stop, and Restart
+
+```bash
+docker compose up -d hae-mongo hae-server
+docker compose restart hae-server
+docker compose stop
+```
+
+### Rebuild After a Code Update
+
+```bash
+git pull
+docker compose up -d --build hae-server
+```
+
+### MongoDB Storage
+
+MongoDB stores health data in the Docker named volume `mongodb-data`. Normal
+container restarts and `docker compose down` preserve this volume.
+
+Do **not** run the following unless you intentionally want to erase all stored
+health data:
+
+```bash
+docker compose down -v
+```
+
+### Open a MongoDB Shell
+
+Replace the example credentials with the values from `.env`:
+
+```bash
+docker compose exec hae-mongo mongosh \
+  --username admin \
+  --password YOUR_MONGO_PASSWORD \
+  --authenticationDatabase admin \
+  health-auto-export
+```
+
+Useful commands inside `mongosh`:
+
+```javascript
+show collections
+db.sleep_analysis.countDocuments()
+db.workouts.countDocuments()
+```
+
+### Back Up MongoDB
+
+```bash
+docker compose exec hae-mongo mongodump \
+  --username admin \
+  --password YOUR_MONGO_PASSWORD \
+  --authenticationDatabase admin \
+  --db health-auto-export \
+  --archive=/tmp/health-auto-export.archive
+
+docker compose cp \
+  hae-mongo:/tmp/health-auto-export.archive \
+  ./health-auto-export.archive
+```
+
+Store the archive securely: it contains private health information.
+
+## Troubleshooting
+
+### The iPhone Cannot Reach the Server
+
+- Confirm the phone and computer are on the same network.
+- Use the computer's IP address, not `localhost`.
+- Confirm `docker compose ps` shows `hae-server` running.
+- Open `http://YOUR-COMPUTER-IP:3001/` from Safari on the iPhone.
+- Check firewall rules for TCP port `3001`.
+
+### The App Reports an HTTP Error
+
+- Confirm the header name is exactly `api-key`.
+- Confirm its value is `WRITE_TOKEN`, not `READ_TOKEN`.
+- Check `docker compose logs -f hae-server`.
+- Review the automation's Activity Logs for the response status.
+
+### Exports Time Out
+
+- Keep Batch Requests on.
+- Export fewer unused health metrics.
+- Use `Minutes`, not `Seconds`, for workout metric grouping.
+- Run the initial Health Metrics and Workouts backfills separately.
+
+### The Dashboard Has No Data
+
+- Confirm both seven-day manual exports completed successfully.
+- Confirm the dashboard's selected date range includes the imported dates.
+- Check MongoDB collection counts with `mongosh`.
+
+## Credits
+
+This repository is a fork of
+[HealthyApps/health-auto-export-server](https://github.com/HealthyApps/health-auto-export-server).
+
+The React dashboard is adapted from
+[meltforce/FreeReps](https://github.com/meltforce/FreeReps), a self-hosted
+health-data server and visualization dashboard. This project reuses and adapts
+the React dashboard design and components; it does not include FreeReps'
+Go/TimescaleDB backend or iOS companion app.
+
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for additional
+attribution.
 
 ## Contributing
 
-Your contributions are welcome! Whether it's a bug fix, a new feature, a documentation update, or sharing your dashboards, we appreciate your help.
-
-If you'd like to contribute to this project, create a pull request with your changes.
+Issues and pull requests are welcome.
