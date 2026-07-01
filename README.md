@@ -73,15 +73,10 @@ MONGO_PORT=27017
 MONGO_USERNAME=admin
 MONGO_PASSWORD=replace-with-a-secure-password
 MONGO_DB=health-auto-export
-READ_TOKEN=sk-generated-read-token
 WRITE_TOKEN=sk-generated-write-token
-DASHBOARD_USERNAME=admin
-DASHBOARD_PASSWORD=replace-with-a-dashboard-password
 ```
 
-Keep `.env` private. The `WRITE_TOKEN` permits ingestion and the `READ_TOKEN`
-permits access to the read API. If `DASHBOARD_PASSWORD` is omitted, the
-dashboard uses `READ_TOKEN` as its password.
+Keep `.env` private. The `WRITE_TOKEN` permits ingestion.
 
 Start MongoDB and the application server:
 
@@ -103,7 +98,7 @@ Open the React dashboard:
 http://localhost:3001/dashboard/
 ```
 
-Sign in with `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD`.
+The dashboard opens directly without a login prompt.
 
 ### Optional: Access the Dashboard from iPhone with Tailscale
 
@@ -161,7 +156,6 @@ https://YOUR-MAC-NAME.YOUR-TAILNET.ts.net/api/data
 
 Use Tailscale Serve, not Tailscale Funnel. Serve keeps the dashboard private to
 devices authorized on the tailnet; Funnel would make it publicly reachable.
-The dashboard login is still required.
 
 ## 2. Configure Health Auto Export on iPhone
 
@@ -342,7 +336,7 @@ Store the archive securely: it contains private health information.
 ### The App Reports an HTTP Error
 
 - Confirm the header name is exactly `api-key`.
-- Confirm its value is `WRITE_TOKEN`, not `READ_TOKEN`.
+- Confirm its value matches `WRITE_TOKEN` in `.env`.
 - Check `docker compose logs -f hae-server`.
 - Review the automation's Activity Logs for the response status.
 

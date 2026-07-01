@@ -302,13 +302,6 @@ router.get('/version', (_req: Request, res: Response) => {
   res.json({ version: 'health-auto-dashboard' });
 });
 
-router.get('/me', (_req: Request, res: Response) => {
-  res.json({
-    login: process.env.DASHBOARD_USERNAME || 'admin',
-    display_name: 'Health Auto Export',
-  });
-});
-
 router.get('/dashboard/init', async (_req: Request, res: Response) => {
   try {
     const names = await listMetricCollections();
