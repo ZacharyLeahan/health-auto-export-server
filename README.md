@@ -15,7 +15,8 @@ serves the dashboard at `http://localhost:3001/dashboard/`.
   with a **Premium subscription or Premium Lifetime license**. Premium is
   required for automatic background exports to a REST API.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- A computer that the iPhone can reach over the local network
+- A computer that the iPhone can reach over the local network or
+  [Tailscale](https://tailscale.com/)
 
 The official
 [Health Auto Export REST API guide](https://help.healthyapps.dev/en/health-auto-export/automations/rest-api/)
@@ -103,6 +104,64 @@ http://localhost:3001/dashboard/
 ```
 
 Sign in with `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD`.
+
+### Optional: Access the Dashboard from iPhone with Tailscale
+
+[Tailscale](https://tailscale.com/) is a convenient way to reach the dashboard
+from an iPhone without exposing it to the public internet.
+
+1. [Install Tailscale on the Mac](https://tailscale.com/docs/install/mac).
+2. [Install Tailscale on the iPhone](https://tailscale.com/docs/install/ios).
+3. Sign in to the same tailnet on both devices.
+4. Make sure Tailscale is connected and the Docker services are running on the
+   Mac.
+5. Find the Mac's
+   [MagicDNS hostname](https://tailscale.com/docs/features/magicdns) in the
+   Tailscale app or admin console.
+6. Open the following URL in Safari on the iPhone:
+
+```text
+http://YOUR-MAC-TAILSCALE-HOSTNAME:3001/dashboard/
+```
+
+The fully qualified hostname also works:
+
+```text
+http://YOUR-MAC-NAME.YOUR-TAILNET.ts.net:3001/dashboard/
+```
+
+The same hostname can be used for the Health Auto Export endpoint:
+
+```text
+http://YOUR-MAC-TAILSCALE-HOSTNAME:3001/api/data
+```
+
+Bookmark the dashboard in Safari, or use **Share → Add to Home Screen**. Opening
+that icon gives the dashboard an app-like experience on iPhone.
+
+For a private HTTPS URL without `:3001`, use
+[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) on the
+Mac:
+
+```bash
+tailscale serve --bg localhost:3001
+```
+
+Tailscale prints the generated URL, which will look like:
+
+```text
+https://YOUR-MAC-NAME.YOUR-TAILNET.ts.net/dashboard/
+```
+
+With Serve enabled, the automation endpoint is:
+
+```text
+https://YOUR-MAC-NAME.YOUR-TAILNET.ts.net/api/data
+```
+
+Use Tailscale Serve, not Tailscale Funnel. Serve keeps the dashboard private to
+devices authorized on the tailnet; Funnel would make it publicly reachable.
+The dashboard login is still required.
 
 ## 2. Configure Health Auto Export on iPhone
 
@@ -203,21 +262,6 @@ For more reliable background runs:
   locked, so a scheduled run may occur later than its nominal time.
 - Review each automation's Activity Logs when data appears incomplete.
 
-## Fixing a Missing or Truncated Night
-
-If the dashboard begins a sleep session later than the Apple Health app:
-
-1. Compare the dashboard's **First Recorded Stage** with Apple Health.
-2. Temporarily run a manual, continuous export that covers the entire night,
-   preferably `Previous 7 Days`.
-3. Do not export the night as separate `Today` and `Yesterday` requests.
-4. Confirm success in Health Auto Export's Activity Logs.
-5. Refresh the dashboard.
-6. Return the automation to `Since Last Sync`.
-
-The dashboard can display only records received by the server; it cannot infer
-sleep stages that were omitted from the export.
-
 ## Docker and MongoDB Operations
 
 ### Start, Stop, and Restart
@@ -288,7 +332,8 @@ Store the archive securely: it contains private health information.
 
 ### The iPhone Cannot Reach the Server
 
-- Confirm the phone and computer are on the same network.
+- Confirm the phone and computer are on the same local network, or that both
+  are connected to the same Tailscale tailnet.
 - Use the computer's IP address, not `localhost`.
 - Confirm `docker compose ps` shows `hae-server` running.
 - Open `http://YOUR-COMPUTER-IP:3001/` from Safari on the iPhone.
