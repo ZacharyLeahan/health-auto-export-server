@@ -1,4 +1,5 @@
 import { SleepStage } from "../../api";
+import { formatUsHour, formatUsTime } from "../../utils/dateTime";
 
 const STAGE_ORDER: Record<string, number> = {
   Awake: 0,
@@ -53,8 +54,7 @@ export default function Hypnogram({ stages }: Props) {
   while (h.getTime() < endMs) {
     const pct = ((h.getTime() - startMs) / totalMs) * 100;
     if (pct > 2 && pct < 98) {
-      const hr = h.getHours().toString().padStart(2, "0");
-      hourLabels.push({ time: `${hr}:00`, pct });
+      hourLabels.push({ time: formatUsHour(h.getHours()), pct });
     }
     h = new Date(h.getTime() + step * 3600000);
   }
@@ -96,7 +96,7 @@ export default function Hypnogram({ stages }: Props) {
                     backgroundColor: color,
                     opacity: 0.85,
                   }}
-                  title={`${stage.Stage} ${new Date(stage.StartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${new Date(stage.EndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                  title={`${stage.Stage} ${formatUsTime(stage.StartTime)} – ${formatUsTime(stage.EndTime)}`}
                 />
               );
             })}

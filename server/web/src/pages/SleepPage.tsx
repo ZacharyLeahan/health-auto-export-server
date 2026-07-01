@@ -5,6 +5,7 @@ import TimeRangeSelector from "../components/TimeRangeSelector";
 import SleepMetricCards from "../components/sleep/SleepMetricCards";
 import Hypnogram from "../components/sleep/Hypnogram";
 import SleepHistoryChart from "../components/sleep/SleepHistoryChart";
+import { formatUsDate } from "../utils/dateTime";
 import { resolveSessionStages } from "../utils/sleepStages";
 import { daysFromRange, formatDateLabel, type TimeRange } from "../utils/timeRange";
 
@@ -78,7 +79,7 @@ export default function SleepPage() {
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-zinc-400">
             Last Night &mdash;{" "}
-            {new Date(lastSession.Date).toLocaleDateString(undefined, {
+            {formatUsDate(lastSession.Date, {
               weekday: "short",
               month: "short",
               day: "numeric",

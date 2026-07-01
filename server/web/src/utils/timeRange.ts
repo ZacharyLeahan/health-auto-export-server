@@ -15,13 +15,13 @@ export function daysFromRange(range_: TimeRange): number {
   }
 }
 
-/** Format "2026-02-19" → "19.02." */
+/** Format "2026-02-19" → "02/19". */
 function fmtDate(iso: string): string {
   const [, m, d] = iso.split("-");
-  return `${d}.${m}.`;
+  return `${m}/${d}`;
 }
 
-/** Format date range label, e.g. "21.01. – 19.02." */
+/** Format date range label, e.g. "01/21 – 02/19". */
 export function formatDateLabel(start: string, end: string): string {
   return `${fmtDate(start)} – ${fmtDate(end)}`;
 }

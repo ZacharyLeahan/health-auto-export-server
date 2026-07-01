@@ -1,10 +1,11 @@
 import type uPlot from "uplot";
+import { formatUsDate, formatUsTime } from "./dateTime";
 
 /**
- * 24h time axis formatter for uPlot.
- * Shows "HH:MM" for sub-day tick spacing, "DD.MM." for daily spacing.
+ * U.S. time axis formatter for uPlot.
+ * Shows 12-hour time for sub-day tick spacing and month-first dates otherwise.
  */
-export const axisValues24h: uPlot.Axis.Values = (
+export const axisValuesUs: uPlot.Axis.Values = (
   _u: uPlot,
   vals: number[]
 ): string[] =>
@@ -12,13 +13,9 @@ export const axisValues24h: uPlot.Axis.Values = (
     const d = new Date(v * 1000);
     const span = vals.length > 1 ? Math.abs(vals[1] - vals[0]) : 86400;
     if (span < 86400) {
-      return d.toLocaleString(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
+      return formatUsTime(d);
     }
-    return d.toLocaleDateString(undefined, {
+    return formatUsDate(d, {
       month: "short",
       day: "numeric",
     });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Workout } from "../../api";
+import { formatUsDate, formatUsTime } from "../../utils/dateTime";
 import { getWorkoutDisplayName, getWorkoutFilterKey } from "./workoutNames";
 
 const PAGE_SIZE = 10;
@@ -106,10 +107,10 @@ function WorkoutListView({ workouts }: { workouts: Workout[] }) {
   const groups: { date: string; workouts: Workout[] }[] = [];
   let currentDate = "";
   for (const w of workouts) {
-    const d = new Date(w.StartTime).toLocaleDateString("de-DE", {
+    const d = formatUsDate(w.StartTime, {
       weekday: "short",
-      day: "numeric",
       month: "short",
+      day: "numeric",
     });
     if (d !== currentDate) {
       groups.push({ date: d, workouts: [w] });
@@ -133,12 +134,8 @@ function WorkoutListView({ workouts }: { workouts: Workout[] }) {
               state={{ workout: w }}
               className="flex items-center gap-4 px-3 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors text-sm"
             >
-              <span className="text-zinc-500 text-xs w-12 shrink-0">
-                {new Date(w.StartTime).toLocaleTimeString("de-DE", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                })}
+              <span className="text-zinc-500 text-xs w-16 shrink-0">
+                {formatUsTime(w.StartTime)}
               </span>
               <span className="text-zinc-100 font-medium min-w-0 truncate flex-1">
                 {getWorkoutDisplayName(w)}

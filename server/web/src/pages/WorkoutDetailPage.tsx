@@ -5,6 +5,7 @@ import { getWorkoutDisplayName } from "../components/workouts/workoutNames";
 import HRTimelineChart from "../components/workouts/HRTimelineChart";
 import HRZoneBars from "../components/workouts/HRZoneBars";
 import RouteMap from "../components/workouts/RouteMap";
+import { formatUsDateTime } from "../utils/dateTime";
 
 function formatDuration(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -62,15 +63,7 @@ export default function WorkoutDetailPage() {
       <div>
         <h2 className="text-xl font-semibold text-zinc-100">{getWorkoutDisplayName(w)}</h2>
         <div className="text-sm text-zinc-500 mt-1">
-          {new Date(w.StartTime).toLocaleDateString("de-DE", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })}
+          {formatUsDateTime(w.StartTime)}
         </div>
       </div>
 

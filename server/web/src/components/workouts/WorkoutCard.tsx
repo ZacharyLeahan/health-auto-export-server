@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Workout } from "../../api";
+import { formatUsDate } from "../../utils/dateTime";
 
 function formatDuration(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -9,7 +10,7 @@ function formatDuration(sec: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return formatUsDate(iso, {
     weekday: "short",
     month: "short",
     day: "numeric",

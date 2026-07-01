@@ -1,4 +1,5 @@
 import { SleepSession } from "../../api";
+import { formatUsTime } from "../../utils/dateTime";
 
 function hoursToHHMM(hours: number): string {
   const h = Math.floor(hours);
@@ -49,10 +50,7 @@ export default function SleepMetricCards({
           label="First Recorded Stage"
           value={
             session.SleepStart
-              ? new Date(session.SleepStart).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+              ? formatUsTime(session.SleepStart)
               : "—"
           }
         />
