@@ -79,7 +79,7 @@ export default function TimeSeriesChart({
       opts,
       plotData: [new Float64Array(times), values] as uPlot.AlignedData,
     };
-  }, [data, label, unit]);
+  }, [data, label, unit, multiplier]);
 
   if (isLoading) {
     return (

@@ -51,15 +51,20 @@ function formatLabel(name: string): string {
     .join(' ');
 }
 
-function parseDateParam(value: string | undefined, fallback: Date): Date {
+function parseDateParam(value: string | undefined, fallback: Date, endOfDay = false): Date {
   if (!value) return fallback;
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+  if (Number.isNaN(parsed.getTime())) return fallback;
+  if (endOfDay) {
+    parsed.setUTCHours(23, 59, 59, 999);
+  }
+  return parsed;
 }
 
 function parseRange(req: Request): { start: Date; end: Date } {
-  const end = parseDateParam(req.query.end as string | undefined, new Date());
+  const end = parseDateParam(req.query.end as string | undefined, new Date(), true);
   const defaultStart = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+  defaultStart.setUTCHours(0, 0, 0, 0);
   const start = parseDateParam(req.query.start as string | undefined, defaultStart);
   return { start, end };
 }
@@ -452,32 +457,127 @@ router.get('/correlation', async (req: Request, res: Response) => {
 router.get('/sleep', async (req: Request, res: Response) => {
   try {
     const { start, end } = parseRange(req);
-    const sessions = await SleepModel.find({
+    const records = await SleepModel.find({
       date: { $gte: start, $lte: end },
     })
       .sort({ date: -1 })
       .lean();
 
-    const mappedSessions = sessions.map((session, index) => {
-      const asleep = (session.core ?? 0) + (session.rem ?? 0) + (session.deep ?? 0);
-      return {
-        ID: index + 1,
-        UserID: 0,
-        Date: new Date(session.date).toISOString(),
-        TotalSleep: asleep,
-        Asleep: asleep,
-        Core: session.core ?? 0,
-        Deep: session.deep ?? 0,
-        REM: session.rem ?? 0,
-        InBed: session.inBed ?? 0,
-        SleepStart: session.sleepStart ? new Date(session.sleepStart).toISOString() : '',
-        SleepEnd: session.sleepEnd ? new Date(session.sleepEnd).toISOString() : '',
-        InBedStart: session.inBedStart ? new Date(session.inBedStart).toISOString() : '',
-        InBedEnd: session.inBedEnd ? new Date(session.inBedEnd).toISOString() : '',
-      };
-    });
+    type NightBucket = {
+      Date: Date;
+      Core: number;
+      Deep: number;
+      REM: number;
+      Awake: number;
+      InBed: number;
+      SleepStart: Date | null;
+      SleepEnd: Date | null;
+      InBedStart: Date | null;
+      InBedEnd: Date | null;
+    };
 
-    res.json({ sessions: mappedSessions, stages: [] });
+    const nights = new Map<string, NightBucket>();
+
+    for (const record of records) {
+      const nightDate = new Date(record.date);
+      nightDate.setUTCHours(0, 0, 0, 0);
+      const key = nightDate.toISOString();
+
+      const bucket =
+        nights.get(key) ??
+        ({
+          Date: nightDate,
+          Core: 0,
+          Deep: 0,
+          REM: 0,
+          Awake: 0,
+          InBed: 0,
+          SleepStart: null,
+          SleepEnd: null,
+          InBedStart: null,
+          InBedEnd: null,
+        } satisfies NightBucket);
+
+      bucket.Core += record.core ?? 0;
+      bucket.Deep += record.deep ?? 0;
+      bucket.REM += record.rem ?? 0;
+      bucket.Awake += record.awake ?? 0;
+      bucket.InBed += record.inBed ?? 0;
+
+      const candidates = [
+        record.sleepStart,
+        record.inBedStart,
+        record.date,
+        record.endDate,
+        record.sleepEnd,
+        record.inBedEnd,
+      ].filter(Boolean) as Date[];
+
+      for (const candidate of candidates) {
+        const when = new Date(candidate);
+        if (!bucket.SleepStart || when < bucket.SleepStart) bucket.SleepStart = when;
+        if (!bucket.SleepEnd || when > bucket.SleepEnd) bucket.SleepEnd = when;
+        if (record.inBedStart && (!bucket.InBedStart || when < bucket.InBedStart)) {
+          bucket.InBedStart = new Date(record.inBedStart);
+        }
+        if (record.inBedEnd && (!bucket.InBedEnd || when > bucket.InBedEnd)) {
+          bucket.InBedEnd = new Date(record.inBedEnd);
+        }
+      }
+
+      nights.set(key, bucket);
+    }
+
+    const mappedSessions = [...nights.values()]
+      .map((session, index) => {
+        const asleep = session.Core + session.REM + session.Deep;
+        const totalSleep = asleep > 0 ? asleep : session.InBed;
+        return {
+          ID: index + 1,
+          UserID: 0,
+          Date: session.Date.toISOString(),
+          TotalSleep: totalSleep,
+          Asleep: asleep,
+          Core: session.Core,
+          Deep: session.Deep,
+          REM: session.REM,
+          Awake: session.Awake,
+          InBed: session.InBed,
+          SleepStart: session.SleepStart ? session.SleepStart.toISOString() : '',
+          SleepEnd: session.SleepEnd ? session.SleepEnd.toISOString() : '',
+          InBedStart: session.InBedStart ? session.InBedStart.toISOString() : '',
+          InBedEnd: session.InBedEnd ? session.InBedEnd.toISOString() : '',
+        };
+      })
+      .filter((session) => session.TotalSleep > 0 || session.InBed > 0)
+      .sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
+
+    const stageTimeline = records
+      .filter((record) => record.stage && (record.qty ?? 0) > 0)
+      .map((record) => {
+        const startTime = new Date(record.date);
+        const endTime = record.endDate
+          ? new Date(record.endDate)
+          : new Date(startTime.getTime() + (record.qty ?? 0) * 3600000);
+        const stageName = String(record.stage);
+        const normalized =
+          stageName.toLowerCase() === 'rem'
+            ? 'REM'
+            : stageName.charAt(0).toUpperCase() + stageName.slice(1).toLowerCase();
+
+        return {
+          StartTime: startTime.toISOString(),
+          EndTime: endTime.toISOString(),
+          Stage: normalized,
+          DurationHr: record.qty ?? 0,
+          Source: record.source,
+        };
+      })
+      .sort(
+        (a, b) => new Date(a.StartTime).getTime() - new Date(b.StartTime).getTime(),
+      );
+
+    res.json({ sessions: mappedSessions, stages: stageTimeline });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load sleep data' });
   }

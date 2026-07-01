@@ -37,15 +37,18 @@ export interface HeartRateMetric {
 
 export interface SleepMetric {
   date: Date;
+  endDate?: Date | null;
+  stage?: string;
+  qty?: number;
   inBedStart?: Date | null;
   inBedEnd?: Date | null;
   sleepStart?: Date | null;
   sleepEnd?: Date | null;
-  core: number;
-  rem: number;
-  deep: number;
-  awake: number;
-  inBed: number;
+  core?: number;
+  rem?: number;
+  deep?: number;
+  awake?: number;
+  inBed?: number;
   units: string;
   source: string;
   metadata?: Record<string, string>;
@@ -83,24 +86,55 @@ export const mapMetric = (
         metadata: measurement.metadata,
       }));
     case MetricName.SLEEP_ANALYSIS:
-      const sleepData = metric.data as SleepMetric[];
+      const sleepData = metric.data as unknown as Record<string, unknown>[];
       return sleepData
-        .map((measurement) => ({
-          date: new Date(measurement.date),
-          inBedStart: parseOptionalDate(measurement.inBedStart),
-          inBedEnd: parseOptionalDate(measurement.inBedEnd),
-          sleepStart: parseOptionalDate(measurement.sleepStart),
-          sleepEnd: parseOptionalDate(measurement.sleepEnd),
-          core: measurement.core,
-          rem: measurement.rem,
-          deep: measurement.deep,
-          awake: measurement.awake,
-          inBed: measurement.inBed,
-          units: metric.units,
-          source: measurement.source,
-          metadata: measurement.metadata,
-        }))
-        .filter((measurement) => !Number.isNaN(measurement.date.getTime()));
+        .map((measurement): SleepMetric | null => {
+          const source = String(measurement.source ?? 'unknown');
+          const dateRaw = measurement.date ?? measurement.startDate;
+          const date = new Date(dateRaw as string | Date);
+          if (Number.isNaN(date.getTime())) return null;
+
+          const endDate = parseOptionalDate(measurement.endDate);
+          const stage = typeof measurement.value === 'string' ? measurement.value : undefined;
+          const qty = typeof measurement.qty === 'number' ? measurement.qty : 0;
+
+          const core =
+            typeof measurement.core === 'number' ? measurement.core : stage === 'Core' ? qty : 0;
+          const rem =
+            typeof measurement.rem === 'number' ? measurement.rem : stage === 'REM' ? qty : 0;
+          const deep =
+            typeof measurement.deep === 'number' ? measurement.deep : stage === 'Deep' ? qty : 0;
+          const awake =
+            typeof measurement.awake === 'number' ? measurement.awake : stage === 'Awake' ? qty : 0;
+          const inBed =
+            typeof measurement.inBed === 'number'
+              ? measurement.inBed
+              : stage === 'In Bed'
+                ? qty
+                : typeof measurement.asleep === 'number'
+                  ? measurement.asleep
+                  : 0;
+
+          return {
+            date,
+            endDate,
+            stage,
+            qty: qty || undefined,
+            inBedStart: parseOptionalDate(measurement.inBedStart),
+            inBedEnd: parseOptionalDate(measurement.inBedEnd),
+            sleepStart: parseOptionalDate(measurement.sleepStart),
+            sleepEnd: parseOptionalDate(measurement.sleepEnd),
+            core,
+            rem,
+            deep,
+            awake,
+            inBed,
+            units: metric.units,
+            source,
+            metadata: measurement.metadata as Record<string, string> | undefined,
+          };
+        })
+        .filter((measurement): measurement is SleepMetric => measurement !== null) as Metric[];
     default:
       const baseData = metric.data as BaseMetric[];
       return baseData.map((measurement) => ({
@@ -160,21 +194,24 @@ HeartRateSchema.index({ date: 1, source: 1 }, { unique: true });
 // Sleep Schema
 const SleepSchema: Schema = new Schema({
   date: { type: Date, required: true },
+  endDate: { type: Date, required: false },
+  stage: { type: String, required: false },
+  qty: { type: Number, required: false },
   inBedStart: { type: Date, required: false },
   inBedEnd: { type: Date, required: false },
   sleepStart: { type: Date, required: false },
   sleepEnd: { type: Date, required: false },
-  core: { type: Number, required: true },
-  rem: { type: Number, required: true },
-  deep: { type: Number, required: true },
-  awake: { type: Number, required: true },
-  inBed: { type: Number, required: true },
+  core: { type: Number, required: false, default: 0 },
+  rem: { type: Number, required: false, default: 0 },
+  deep: { type: Number, required: false, default: 0 },
+  awake: { type: Number, required: false, default: 0 },
+  inBed: { type: Number, required: false, default: 0 },
   units: { type: String, required: true },
   source: { type: String, required: true },
   metadata: { type: Object, required: false },
 });
 
-SleepSchema.index({ date: 1, source: 1 }, { unique: true });
+SleepSchema.index({ date: 1, source: 1, stage: 1, endDate: 1 }, { unique: true });
 
 export const createMetricModel = (name: MetricName) => {
   return mongoose.model<IMetric>(String(name), BaseMetricSchema, String(name));

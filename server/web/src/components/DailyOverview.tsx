@@ -2,18 +2,31 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchLatestMetrics, HealthMetricRow, DailySum } from "../api";
 import { useAvailableMetrics, type MetricOption } from "../hooks/useMetrics";
 
+function formatNumber(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `${Math.round(value / 1000)}k`;
+  if (abs >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if (abs >= 100) return value.toFixed(0);
+  if (abs >= 10) return value.toFixed(1);
+  return value.toFixed(2);
+}
+
 function getValue(row: HealthMetricRow, multiplier: number): string {
   const raw = row.AvgVal ?? row.Qty;
   if (raw === null) return "—";
-  const v = raw * multiplier;
-  return v >= 100 ? v.toFixed(0) : v.toFixed(1);
+  return formatNumber(raw * multiplier);
 }
 
 // Map raw Apple Health units to human-friendly display units
 const UNIT_MAP: Record<string, Record<string, string>> = {
   heart_rate: { "count/min": "bpm" },
   resting_heart_rate: { "count/min": "bpm" },
+  walking_heart_rate: { "count/min": "bpm" },
   respiratory_rate: { "count/min": "br/min" },
+  heart_rate_variability: { ms: "ms" },
+  environmental_audio_exposure: { dBASPL: "dB" },
+  headphone_audio_exposure: { dBASPL: "dB" },
 };
 
 function displayUnit(metricName: string, rawUnit: string, meta?: MetricOption): string {
@@ -105,7 +118,7 @@ function MetricCard({
       total = total / 4.184;
       displayUnits = "kcal";
     }
-    value = Math.round(total * multiplier).toString();
+    value = formatNumber(total * multiplier);
     unit = displayUnit(row.MetricName, displayUnits, meta);
     subtitle = "today";
   } else {
