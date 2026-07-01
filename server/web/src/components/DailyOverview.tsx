@@ -6,7 +6,7 @@ function formatNumber(value: number): string {
   const abs = Math.abs(value);
   if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (abs >= 10_000) return `${Math.round(value / 1000)}k`;
-  if (abs >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if (abs >= 1000) return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
   if (abs >= 100) return value.toFixed(0);
   if (abs >= 10) return value.toFixed(1);
   return value.toFixed(2);

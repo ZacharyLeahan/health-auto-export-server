@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { SleepSession, SleepStage } from "../../api";
+import { formatUsDate, formatUsHour, formatUsTime } from "../../utils/dateTime";
 import { resolveSessionStages } from "../../utils/sleepStages";
 
 const STAGE_COLORS: Record<string, string> = {
@@ -71,7 +72,7 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
     for (let off = minOffset; off <= maxOffset; off += 2) {
       let hour = off + 18;
       if (hour >= 24) hour -= 24;
-      yLabels.push(`${hour.toString().padStart(2, "0")}:00`);
+      yLabels.push(formatUsHour(hour));
     }
 
     // Build a map from date string → session index for quick lookup
@@ -100,9 +101,14 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
     const avgM = Math.round((avgSleepHours - avgH) * 60);
 
     // Date range label
-    const firstDate = new Date(start);
-    const lastDate = new Date(end);
-    const dateRangeLabel = `${firstDate.toLocaleDateString("de-DE", { day: "numeric", month: "short" })} – ${lastDate.toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" })}`;
+    const dateRangeLabel = `${formatUsDate(start, {
+      month: "short",
+      day: "numeric",
+    })} – ${formatUsDate(end, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
 
     return {
       sessionsWithStages,
@@ -138,7 +144,7 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
   };
 
   // Show date labels at a reasonable interval
-  const labelInterval = columnCount <= 14 ? 1 : columnCount <= 31 ? 2 : 5;
+  const labelInterval = columnCount <= 14 ? 1 : columnCount <= 31 ? 3 : 7;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
@@ -180,10 +186,14 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
               // Date label
               const showLabel = colIdx % labelInterval === 0;
               const d = new Date(date + "T00:00:00");
-              const dayLabel = d.toLocaleDateString(undefined, {
-                weekday: columnCount <= 14 ? "short" : undefined,
-                day: "numeric",
+              const numericDate = formatUsDate(d, {
+                month: "2-digit",
+                day: "2-digit",
               });
+              const dayLabel =
+                columnCount <= 14
+                  ? `${formatUsDate(d, { weekday: "short" })}\n${numericDate}`
+                  : numericDate;
 
               if (!hasSession || !entry) {
                 // Empty column — no session for this date
@@ -194,7 +204,7 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
                     style={{ minWidth: 0 }}
                   >
                     {showLabel && (
-                      <span className="absolute bottom-0 translate-y-full pt-1 text-[10px] text-zinc-600 whitespace-nowrap">
+                      <span className="absolute bottom-0 translate-y-full pt-1 text-[10px] leading-tight text-center text-zinc-600 whitespace-pre">
                         {dayLabel}
                       </span>
                     )}
@@ -229,7 +239,7 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
                               STAGE_COLORS[stage.Stage] ?? "#71717a",
                             opacity: 0.85,
                           }}
-                          title={`${stage.Stage} ${new Date(stage.StartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })} - ${new Date(stage.EndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}`}
+                          title={`${stage.Stage} ${formatUsTime(stage.StartTime)} – ${formatUsTime(stage.EndTime)}`}
                         />
                       );
                     })
@@ -237,7 +247,7 @@ export default function SleepHistoryChart({ sessions, stages, start, end }: Prop
 
                   {/* Date label at bottom */}
                   {showLabel && (
-                    <span className="absolute bottom-0 translate-y-full pt-1 text-[10px] text-zinc-500 whitespace-nowrap">
+                    <span className="absolute bottom-0 translate-y-full pt-1 text-[10px] leading-tight text-center text-zinc-500 whitespace-pre">
                       {dayLabel}
                     </span>
                   )}

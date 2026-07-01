@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { WorkoutHR } from "../../api";
+import { formatUsTime } from "../../utils/dateTime";
 import AutoSizeUplot from "../AutoSizeUplot";
 
 // HR Zone boundaries (bpm) and colors
@@ -46,7 +47,7 @@ export default function HRTimelineChart({ hrData }: Props) {
           values: (_u: uPlot, vals: number[]) =>
             vals.map((v) => {
               const d = new Date(v * 1000);
-              return `${d.getHours()}:${d.getMinutes().toString().padStart(2, "0")}`;
+              return formatUsTime(d);
             }),
         },
         {

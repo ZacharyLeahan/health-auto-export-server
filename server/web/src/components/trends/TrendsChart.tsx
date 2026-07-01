@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import AutoSizeUplot from "../AutoSizeUplot";
-import { axisValues24h } from "../../utils/chartFormat";
+import { axisValuesUs } from "../../utils/chartFormat";
 import type { TimeSeriesPoint } from "../../api";
 
 export interface SeriesData {
@@ -72,7 +72,7 @@ export default function TrendsChart({ seriesData }: Props) {
         stroke: "#52525b",
         grid: { stroke: "#27272a", width: 1 },
         ticks: { stroke: "#27272a" },
-        values: axisValues24h,
+        values: axisValuesUs,
       },
       {
         stroke: "#52525b",
