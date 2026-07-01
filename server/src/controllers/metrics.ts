@@ -88,7 +88,9 @@ export const saveMetrics = async (ingestData: IngestData): Promise<IngestRespons
         const mappedMetrics = mapMetric(metric);
         const key = metric.name;
         acc[key] = acc[key] || [];
-        acc[key].push(...mappedMetrics);
+        for (const mappedMetric of mappedMetrics) {
+          acc[key].push(mappedMetric);
+        }
         return acc;
       },
       {} as {
