@@ -4,17 +4,11 @@ import cors from 'cors';
 import express from 'express';
 
 import mongodb from './database/mongodb';
+import { requireWriteAuth } from './middleware/auth';
+import dashboardRouter from './routes/dashboard';
 import ingesterRouter from './routes/ingester';
 import metricsRouter from './routes/metrics';
 import workoutsRouter from './routes/workouts';
-import dashboardRouter from './routes/dashboard';
-import { requireReadAuth, requireWriteAuth } from './middleware/auth';
-import {
-  createDashboardSession,
-  issueDashboardSessionCookie,
-  requireDashboardAuth,
-  verifyDashboardLogin,
-} from './middleware/dashboardAuth';
 
 const app = express();
 const port = 3001;
@@ -37,26 +31,9 @@ app.use(
   ingesterRouter,
 );
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-app.use('/api/metrics', requireReadAuth, metricsRouter);
-app.use('/api/workouts', requireReadAuth, workoutsRouter);
-
-app.post('/dashboard/login', (req, res) => {
-  const username = String(req.body.username || '');
-  const password = String(req.body.password || '');
-
-  if (!verifyDashboardLogin(username, password)) {
-    res.status(401).send('Invalid credentials. <a href="/dashboard/">Try again</a>');
-    return;
-  }
-
-  const token = createDashboardSession();
-  issueDashboardSessionCookie(res, token);
-  res.redirect('/dashboard/');
-});
-
-app.use('/dashboard', requireDashboardAuth);
+app.use('/api/metrics', metricsRouter);
+app.use('/api/workouts', workoutsRouter);
 app.use('/dashboard/api/v1', dashboardRouter);
 
 const webDistPath = path.join(__dirname, '../web/dist');
