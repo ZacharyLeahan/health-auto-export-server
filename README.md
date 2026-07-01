@@ -209,10 +209,11 @@ Set:
 | Data Type | `Workouts` |
 | Include Route Data | **On** |
 | Include Workout Metrics | **On** |
-| Workout Metric Time Grouping | `Minutes` |
+| Time Grouping | `Seconds` |
 
-Routes and workout metrics can create large payloads, which is why Batch
-Requests should remain enabled.
+Use second-level grouping so the heart-rate timeline retains useful detail for
+short workouts that last only a few minutes. This creates larger payloads than
+minute-level grouping, so Batch Requests should remain enabled.
 
 ## 3. Initial Seven-Day Sync
 
@@ -344,7 +345,8 @@ Store the archive securely: it contains private health information.
 
 - Keep Batch Requests on.
 - Export fewer unused health metrics.
-- Use `Minutes`, not `Seconds`, for workout metric grouping.
+- Keep workout Time Grouping set to `Seconds`; shorten the export date range
+  instead of reducing heart-rate detail.
 - Run the initial Health Metrics and Workouts backfills separately.
 
 ### The Dashboard Has No Data
