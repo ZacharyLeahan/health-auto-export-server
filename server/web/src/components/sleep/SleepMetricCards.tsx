@@ -46,7 +46,7 @@ export default function SleepMetricCards({
           value={efficiency !== null ? `${efficiency}%` : "—"}
         />
         <Card
-          label="Bedtime"
+          label="First Recorded Stage"
           value={
             session.SleepStart
               ? new Date(session.SleepStart).toLocaleTimeString([], {
@@ -57,6 +57,12 @@ export default function SleepMetricCards({
           }
         />
       </div>
+
+      <p className="text-xs text-zinc-500">
+        Sleep times and totals reflect the stage records imported from Apple
+        Health. If a night looks truncated, re-export one continuous range that
+        covers the full night.
+      </p>
 
       {stages.length > 0 && (
         <div className="flex flex-wrap gap-3">

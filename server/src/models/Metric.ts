@@ -12,8 +12,9 @@ export interface BaseMetric {
   qty: number;
   units: string;
   date: Date;
-  source: string;
-  metadata?: Record<string, string>;
+  source?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface BloodPressureMetric {
@@ -21,8 +22,8 @@ export interface BloodPressureMetric {
   diastolic: number;
   units: string;
   date: Date;
-  source: string;
-  metadata?: Record<string, string>;
+  source?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface HeartRateMetric {
@@ -31,8 +32,8 @@ export interface HeartRateMetric {
   Max: number;
   units: string;
   date: Date;
-  source: string;
-  metadata?: Record<string, string>;
+  source?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SleepMetric {
@@ -49,9 +50,11 @@ export interface SleepMetric {
   deep?: number;
   awake?: number;
   inBed?: number;
+  totalSleep?: number;
+  asleep?: number;
   units: string;
-  source: string;
-  metadata?: Record<string, string>;
+  source?: string;
+  metadata?: Record<string, unknown>;
 }
 
 const parseOptionalDate = (value: unknown): Date | null => {
@@ -89,7 +92,8 @@ export const mapMetric = (
       const sleepData = metric.data as unknown as Record<string, unknown>[];
       return sleepData
         .map((measurement): SleepMetric | null => {
-          const source = String(measurement.source ?? 'unknown');
+          const source =
+            typeof measurement.source === 'string' ? measurement.source : undefined;
           const dateRaw = measurement.date ?? measurement.startDate;
           const date = new Date(dateRaw as string | Date);
           if (Number.isNaN(date.getTime())) return null;
@@ -129,9 +133,12 @@ export const mapMetric = (
             deep,
             awake,
             inBed,
+            totalSleep:
+              typeof measurement.totalSleep === 'number' ? measurement.totalSleep : undefined,
+            asleep: typeof measurement.asleep === 'number' ? measurement.asleep : undefined,
             units: metric.units,
             source,
-            metadata: measurement.metadata as Record<string, string> | undefined,
+            metadata: measurement.metadata as Record<string, unknown> | undefined,
           };
         })
         .filter((measurement): measurement is SleepMetric => measurement !== null) as Metric[];
@@ -160,9 +167,9 @@ const BaseMetricSchema: Schema = new Schema({
   qty: { type: Number, required: true },
   units: { type: String, required: true },
   date: { type: Date, required: true },
-  source: { type: String, required: true },
+  source: { type: String, required: false },
   metadata: { type: Object, required: false },
-});
+}, { strict: false });
 
 BaseMetricSchema.index({ date: 1, source: 1 }, { unique: true });
 
@@ -172,9 +179,9 @@ const BloodPressureSchema: Schema = new Schema({
   diastolic: { type: Number, required: true },
   units: { type: String, required: true },
   date: { type: Date, required: true },
-  source: { type: String, required: true },
+  source: { type: String, required: false },
   metadata: { type: Object, required: false },
-});
+}, { strict: false });
 
 BloodPressureSchema.index({ date: 1, source: 1 }, { unique: true });
 
@@ -185,9 +192,9 @@ const HeartRateSchema: Schema = new Schema({
   Max: { type: Number, required: true },
   units: { type: String, required: true },
   date: { type: Date, required: true },
-  source: { type: String, required: true },
+  source: { type: String, required: false },
   metadata: { type: Object, required: false },
-});
+}, { strict: false });
 
 HeartRateSchema.index({ date: 1, source: 1 }, { unique: true });
 
@@ -206,10 +213,12 @@ const SleepSchema: Schema = new Schema({
   deep: { type: Number, required: false, default: 0 },
   awake: { type: Number, required: false, default: 0 },
   inBed: { type: Number, required: false, default: 0 },
+  totalSleep: { type: Number, required: false },
+  asleep: { type: Number, required: false },
   units: { type: String, required: true },
-  source: { type: String, required: true },
+  source: { type: String, required: false },
   metadata: { type: Object, required: false },
-});
+}, { strict: false });
 
 SleepSchema.index({ date: 1, source: 1, stage: 1, endDate: 1 }, { unique: true });
 
