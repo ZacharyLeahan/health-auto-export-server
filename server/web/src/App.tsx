@@ -1,17 +1,14 @@
-import { Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
-import Layout from "./components/Layout";
-import ErrorBoundary from "./components/ErrorBoundary";
-import DashboardPage from "./pages/DashboardPage";
+import { Navigate, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
+import DashboardPage from './pages/DashboardPage';
 
-const SleepPage = lazy(() => import("./pages/SleepPage"));
-const GoalsPage = lazy(() => import("./pages/GoalsPage"));
-const CalendarPage = lazy(() => import("./pages/CalendarPage"));
-const WorkoutsPage = lazy(() => import("./pages/WorkoutsPage"));
-const WorkoutDetailPage = lazy(() => import("./pages/WorkoutDetailPage"));
-const MetricsPage = lazy(() => import("./pages/MetricsPage"));
-const CorrelationPage = lazy(() => import("./pages/CorrelationPage"));
-const TrendsPage = lazy(() => import("./pages/TrendsPage"));
+const SleepPage = lazy(() => import('./pages/SleepPage'));
+const GoalsPage = lazy(() => import('./pages/GoalsPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const WorkoutsPage = lazy(() => import('./pages/WorkoutsPage'));
+const WorkoutDetailPage = lazy(() => import('./pages/WorkoutDetailPage'));
 
 function PageFallback() {
   return (
@@ -37,9 +34,9 @@ export default function App() {
         <Route
           path="/"
           element={
-            <ErrorBoundary>
-              <DashboardPage />
-            </ErrorBoundary>
+            <Page>
+              <GoalsPage />
+            </Page>
           }
         />
         <Route
@@ -82,27 +79,12 @@ export default function App() {
             </Page>
           }
         />
+        <Route path="/metrics" element={<Navigate to="/raw" replace />} />
         <Route
-          path="/metrics"
+          path="/raw"
           element={
             <Page>
-              <MetricsPage />
-            </Page>
-          }
-        />
-        <Route
-          path="/correlations"
-          element={
-            <Page>
-              <CorrelationPage />
-            </Page>
-          }
-        />
-        <Route
-          path="/trends"
-          element={
-            <Page>
-              <TrendsPage />
+              <DashboardPage />
             </Page>
           }
         />
