@@ -14,8 +14,21 @@ function formatNumber(value: number): string {
 
 function getValue(row: HealthMetricRow, multiplier: number): string {
   const raw = row.AvgVal ?? row.Qty;
-  if (raw === null) return "—";
+  if (raw === null || !Number.isFinite(raw)) return "—";
   return formatNumber(raw * multiplier);
+}
+
+function hasValue(
+  row: HealthMetricRow,
+  dailySum: DailySum | undefined,
+  meta?: MetricOption,
+): boolean {
+  if (meta?.isCumulative && dailySum && Number.isFinite(dailySum.Total)) {
+    return true;
+  }
+
+  const raw = row.AvgVal ?? row.Qty;
+  return raw !== null && Number.isFinite(raw);
 }
 
 // Map raw Apple Health units to human-friendly display units
@@ -65,7 +78,10 @@ export default function DailyOverview() {
 
   // Show only visible metrics the user has data for
   const ordered = latestRows
-    .filter((m) => lookup.get(m.MetricName)?.visible)
+    .filter((m) => {
+      const meta = lookup.get(m.MetricName);
+      return meta?.visible && hasValue(m, sumMap.get(m.MetricName), meta);
+    })
     .sort((a, b) => {
       const ma = lookup.get(a.MetricName)!;
       const mb = lookup.get(b.MetricName)!;

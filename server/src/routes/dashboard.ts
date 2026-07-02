@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 
 import { SleepModel } from '../models/Metric';
 import { RouteModel, WorkoutModel } from '../models/Workout';
+import { getWorkoutScale, type WorkoutScale } from '../utils/workoutClassification';
 
 const router = Router();
 
@@ -575,7 +576,6 @@ router.get('/sleep', async (req: Request, res: Response) => {
   }
 });
 
-type WorkoutScale = 'snack' | 'real';
 type WorkoutHeatLabel = 'Chill' | 'Warm' | 'Hot' | 'On fire';
 
 function getWorkoutBadges(
@@ -586,7 +586,7 @@ function getWorkoutBadges(
   heatScore: number | null;
   heatLabel: WorkoutHeatLabel | null;
 } {
-  const workoutScale: WorkoutScale = durationSec > 15 * 60 ? 'real' : 'snack';
+  const workoutScale = getWorkoutScale(durationSec);
   if (!heartRateData || heartRateData.length === 0) {
     return { workoutScale, heatScore: null, heatLabel: null };
   }

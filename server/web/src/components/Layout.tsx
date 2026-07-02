@@ -2,14 +2,13 @@ import { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Dashboard" },
   { to: "/goals", label: "Goals" },
+  { to: "/workouts", label: "Workouts" },
   { to: "/calendar", label: "Calendar" },
   { to: "/sleep", label: "Sleep" },
-  { to: "/workouts", label: "Workouts" },
-  { to: "/metrics", label: "Metrics" },
   { to: "/correlations", label: "Correlations" },
   { to: "/trends", label: "Trends" },
+  { to: "/", label: "Raw" },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

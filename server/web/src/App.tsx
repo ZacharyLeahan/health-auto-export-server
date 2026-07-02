@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import Layout from "./components/Layout";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -9,7 +9,6 @@ const GoalsPage = lazy(() => import("./pages/GoalsPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const WorkoutsPage = lazy(() => import("./pages/WorkoutsPage"));
 const WorkoutDetailPage = lazy(() => import("./pages/WorkoutDetailPage"));
-const MetricsPage = lazy(() => import("./pages/MetricsPage"));
 const CorrelationPage = lazy(() => import("./pages/CorrelationPage"));
 const TrendsPage = lazy(() => import("./pages/TrendsPage"));
 
@@ -82,14 +81,7 @@ export default function App() {
             </Page>
           }
         />
-        <Route
-          path="/metrics"
-          element={
-            <Page>
-              <MetricsPage />
-            </Page>
-          }
-        />
+        <Route path="/metrics" element={<Navigate to="/" replace />} />
         <Route
           path="/correlations"
           element={
