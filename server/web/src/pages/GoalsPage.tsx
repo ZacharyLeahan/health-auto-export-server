@@ -212,7 +212,7 @@ export default function GoalsPage() {
               met={data.lifting.met}
             />
             <div className="mt-2 flex justify-between text-xs text-zinc-500">
-              <span>Only sessions over 25 minutes count</span>
+              <span>Sessions of at least 20 minutes count</span>
               <span>Target: 2</span>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function GoalsPage() {
                     {formatMinutesAndSeconds(workout.durationSeconds)}
                     {!workout.qualifiesForLifting && (
                       <span className="ml-1 text-xs text-zinc-500">
-                        under 25 min
+                        under 20 min
                       </span>
                     )}
                   </span>

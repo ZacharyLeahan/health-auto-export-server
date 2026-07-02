@@ -8,7 +8,7 @@ const router = Router();
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ROLLING_DAYS = 7;
 const LIFTING_TARGET_SESSIONS = 2;
-const LIFTING_MIN_DURATION_SECONDS = 25 * 60;
+const LIFTING_MIN_DURATION_SECONDS = 20 * 60;
 const CARDIO_TARGET_SECONDS = 90 * 60;
 const MAX_HEART_RATE_GAP_SECONDS = 30;
 
@@ -125,7 +125,7 @@ router.get('/goals/weekly', async (_req: Request, res: Response) => {
         start: new Date(workout.start).toISOString(),
         durationSeconds: workout.duration,
         category: lifting ? 'lifting' : flexibility ? 'flexibility' : 'cardio',
-        qualifiesForLifting: lifting && workout.duration > LIFTING_MIN_DURATION_SECONDS,
+        qualifiesForLifting: lifting && workout.duration >= LIFTING_MIN_DURATION_SECONDS,
         elevatedHeartRateSeconds: heartRate.elevatedSeconds,
         heartRateTrackedSeconds: heartRate.trackedSeconds,
       };
