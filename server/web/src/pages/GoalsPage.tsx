@@ -99,6 +99,84 @@ function ProgressBar({
   );
 }
 
+function LiftingGauge({
+  value,
+  baselineTarget,
+  stretchTarget,
+}: {
+  value: number;
+  baselineTarget: number;
+  stretchTarget: number;
+}) {
+  const baselineMet = value >= baselineTarget;
+  const stretchMet = value >= stretchTarget;
+  const fillPercent = Math.min(100, (value / stretchTarget) * 100);
+  const baselinePercent = (baselineTarget / stretchTarget) * 100;
+  const fillColor = stretchMet
+    ? "bg-cyan-400"
+    : baselineMet
+      ? "bg-emerald-500"
+      : "bg-amber-500";
+  const status = stretchMet
+    ? "Stretch goal reached"
+    : baselineMet
+      ? `${stretchTarget - value} more reaches stretch`
+      : `${baselineTarget - value} more to baseline`;
+
+  return (
+    <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-3xl font-semibold tabular-nums text-zinc-100">
+          {value}
+          <span className="text-base font-medium text-zinc-500">
+            {" "}
+            / {stretchTarget} sessions
+          </span>
+        </p>
+        <StatusPill
+          met={baselineMet}
+          metLabel={stretchMet ? "Stretch met" : "Baseline met"}
+          unmetLabel="Building baseline"
+        />
+      </div>
+
+      <div className="relative mt-6">
+        <div className="relative h-3 overflow-hidden rounded-full bg-zinc-800">
+          <div
+            className={`h-full rounded-full transition-all ${fillColor}`}
+            style={{ width: `${fillPercent}%` }}
+          />
+          <div
+            className="absolute top-0 h-full w-0.5 bg-zinc-100/80"
+            style={{ left: `${baselinePercent}%` }}
+          />
+          <div className="absolute right-0 top-0 h-full w-0.5 bg-cyan-300/90" />
+        </div>
+
+        <div className="relative mt-2 h-5 text-xs font-medium">
+          <span
+            className={`absolute -translate-x-1/2 ${
+              baselineMet ? "text-emerald-300" : "text-zinc-500"
+            }`}
+            style={{ left: `${baselinePercent}%` }}
+          >
+            Baseline {baselineTarget}
+          </span>
+          <span
+            className={`absolute right-0 ${
+              stretchMet ? "text-cyan-300" : "text-cyan-600"
+            }`}
+          >
+            Stretch {stretchTarget}
+          </span>
+        </div>
+      </div>
+
+      <p className="mt-1 text-xs text-zinc-500">{status}</p>
+    </div>
+  );
+}
+
 function StatusPill({
   met,
   metLabel = "Goal met",
@@ -229,61 +307,11 @@ export default function GoalsPage() {
             </p>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Baseline
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">
-                    {data.lifting.qualifyingSessions}
-                    <span className="text-base text-zinc-500">
-                      {" "}
-                      / {data.lifting.targetSessions}
-                    </span>
-                  </p>
-                </div>
-                <StatusPill met={data.lifting.met} />
-              </div>
-              <div className="mt-3">
-                <ProgressBar
-                  value={data.lifting.qualifyingSessions}
-                  target={data.lifting.targetSessions}
-                  met={data.lifting.met}
-                />
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-cyan-900/50 bg-cyan-950/10 p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-500">
-                    Stretch
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">
-                    {data.lifting.qualifyingSessions}
-                    <span className="text-base text-zinc-500">
-                      {" "}
-                      / {data.lifting.stretchTargetSessions}
-                    </span>
-                  </p>
-                </div>
-                <StatusPill
-                  met={data.lifting.stretchMet}
-                  metLabel="Stretch met"
-                  unmetLabel="Stretch goal"
-                />
-              </div>
-              <div className="mt-3">
-                <ProgressBar
-                  value={data.lifting.qualifyingSessions}
-                  target={data.lifting.stretchTargetSessions}
-                  met={data.lifting.stretchMet}
-                />
-              </div>
-            </div>
-          </div>
+          <LiftingGauge
+            value={data.lifting.qualifyingSessions}
+            baselineTarget={data.lifting.targetSessions}
+            stretchTarget={data.lifting.stretchTargetSessions}
+          />
 
           <div className="mt-6 space-y-2">
             {liftingWorkouts.length === 0 ? (
