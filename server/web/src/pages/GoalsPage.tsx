@@ -9,6 +9,7 @@ interface GoalWorkout {
   durationSeconds: number;
   category: "lifting" | "flexibility" | "cardio";
   qualifiesForLifting: boolean;
+  qualifiesForFlexibility: boolean;
   elevatedHeartRateSeconds: number;
   heartRateTrackedSeconds: number;
 }
@@ -17,6 +18,14 @@ interface WeeklyGoals {
   generatedAt: string;
   window: { start: string; end: string; days: number };
   lifting: {
+    qualifyingSessions: number;
+    targetSessions: number;
+    stretchTargetSessions: number;
+    minimumSessionSeconds: number;
+    met: boolean;
+    stretchMet: boolean;
+  };
+  flexibility: {
     qualifyingSessions: number;
     targetSessions: number;
     minimumSessionSeconds: number;
@@ -90,7 +99,15 @@ function ProgressBar({
   );
 }
 
-function StatusPill({ met }: { met: boolean }) {
+function StatusPill({
+  met,
+  metLabel = "Goal met",
+  unmetLabel = "Needs attention",
+}: {
+  met: boolean;
+  metLabel?: string;
+  unmetLabel?: string;
+}) {
   return (
     <span
       className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -99,7 +116,7 @@ function StatusPill({ met }: { met: boolean }) {
           : "bg-amber-500/15 text-amber-300"
       }`}
     >
-      {met ? "Goal met" : "Needs attention"}
+      {met ? metLabel : unmetLabel}
     </span>
   );
 }
@@ -133,12 +150,17 @@ export default function GoalsPage() {
   }
 
   const primaryGoalsMet =
-    data.lifting.met && data.cardio.elevatedHeartRateMet;
+    data.lifting.met &&
+    data.flexibility.met &&
+    data.cardio.elevatedHeartRateMet;
   const liftingWorkouts = data.workouts.filter(
     (workout) => workout.category === "lifting",
   );
   const cardioWorkouts = data.workouts.filter(
     (workout) => workout.category === "cardio",
+  );
+  const flexibilityWorkouts = data.workouts.filter(
+    (workout) => workout.category === "flexibility",
   );
   const remainingLifts = Math.max(
     0,
@@ -149,6 +171,11 @@ export default function GoalsPage() {
     minutes(
       data.cardio.targetSeconds - data.cardio.elevatedHeartRateSeconds,
     ),
+  );
+  const remainingFlexibility = Math.max(
+    0,
+    data.flexibility.targetSessions -
+      data.flexibility.qualifyingSessions,
   );
 
   return (
@@ -166,10 +193,13 @@ export default function GoalsPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
               {primaryGoalsMet
-                ? "Both lifting frequency and measured elevated-heart-rate time are at or above target."
+                ? "Lifting, flexibility, and measured elevated-heart-rate time are all at or above target."
                 : [
                     remainingLifts > 0
                       ? `${remainingLifts} qualifying lift${remainingLifts === 1 ? "" : "s"} remaining`
+                      : null,
+                    remainingFlexibility > 0
+                      ? `${remainingFlexibility} qualifying flexibility session${remainingFlexibility === 1 ? "" : "s"} remaining`
                       : null,
                     remainingElevatedMinutes > 0
                       ? `${remainingElevatedMinutes} elevated-heart-rate minutes remaining`
@@ -192,28 +222,66 @@ export default function GoalsPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-zinc-400">Lifting</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums text-zinc-100">
-                {data.lifting.qualifyingSessions}
-                <span className="text-lg text-zinc-500">
-                  {" "}
-                  / {data.lifting.targetSessions} sessions
-                </span>
-              </p>
-            </div>
-            <StatusPill met={data.lifting.met} />
+          <div>
+            <h3 className="font-semibold text-zinc-100">Lifting</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Sessions of at least 20 minutes count.
+            </p>
           </div>
-          <div className="mt-5">
-            <ProgressBar
-              value={data.lifting.qualifyingSessions}
-              target={data.lifting.targetSessions}
-              met={data.lifting.met}
-            />
-            <div className="mt-2 flex justify-between text-xs text-zinc-500">
-              <span>Sessions of at least 20 minutes count</span>
-              <span>Target: 2</span>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Baseline
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">
+                    {data.lifting.qualifyingSessions}
+                    <span className="text-base text-zinc-500">
+                      {" "}
+                      / {data.lifting.targetSessions}
+                    </span>
+                  </p>
+                </div>
+                <StatusPill met={data.lifting.met} />
+              </div>
+              <div className="mt-3">
+                <ProgressBar
+                  value={data.lifting.qualifyingSessions}
+                  target={data.lifting.targetSessions}
+                  met={data.lifting.met}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-cyan-900/50 bg-cyan-950/10 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-500">
+                    Stretch
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">
+                    {data.lifting.qualifyingSessions}
+                    <span className="text-base text-zinc-500">
+                      {" "}
+                      / {data.lifting.stretchTargetSessions}
+                    </span>
+                  </p>
+                </div>
+                <StatusPill
+                  met={data.lifting.stretchMet}
+                  metLabel="Stretch met"
+                  unmetLabel="Stretch goal"
+                />
+              </div>
+              <div className="mt-3">
+                <ProgressBar
+                  value={data.lifting.qualifyingSessions}
+                  target={data.lifting.stretchTargetSessions}
+                  met={data.lifting.stretchMet}
+                />
+              </div>
             </div>
           </div>
 
@@ -324,6 +392,76 @@ export default function GoalsPage() {
           </details>
         </section>
       </div>
+
+      <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-zinc-400">Flexibility</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-zinc-100">
+              {data.flexibility.qualifyingSessions}
+              <span className="text-lg text-zinc-500">
+                {" "}
+                / {data.flexibility.targetSessions} sessions
+              </span>
+            </p>
+          </div>
+          <StatusPill met={data.flexibility.met} />
+        </div>
+        <div className="mt-5">
+          <ProgressBar
+            value={data.flexibility.qualifyingSessions}
+            target={data.flexibility.targetSessions}
+            met={data.flexibility.met}
+          />
+          <div className="mt-2 flex justify-between text-xs text-zinc-500">
+            <span>Only sessions over 20 minutes count</span>
+            <span>Target: 5</span>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {flexibilityWorkouts.length === 0 ? (
+            <p className="rounded-lg bg-zinc-950/60 p-3 text-sm text-zinc-500">
+              No flexibility workouts in this rolling window.
+            </p>
+          ) : (
+            flexibilityWorkouts.map((workout) => (
+              <Link
+                key={workout.id}
+                to={`/workouts/${workout.id}`}
+                className="flex items-center justify-between gap-3 rounded-lg bg-zinc-950/60 p-3 transition-colors hover:bg-zinc-800"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-zinc-200">
+                    {workout.name}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {formatUsDate(workout.start, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 text-sm tabular-nums ${
+                    workout.qualifiesForFlexibility
+                      ? "text-emerald-300"
+                      : "text-amber-300"
+                  }`}
+                >
+                  {formatMinutesAndSeconds(workout.durationSeconds)}
+                  {!workout.qualifiesForFlexibility && (
+                    <span className="ml-1 text-xs text-zinc-500">
+                      not over 20 min
+                    </span>
+                  )}
+                </span>
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
 
       <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
         <div className="flex flex-wrap items-end justify-between gap-2">
