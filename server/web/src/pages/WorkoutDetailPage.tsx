@@ -1,9 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "react-router-dom";
-import { fetchWorkoutDetail, type Workout } from "../api";
+import {
+  fetchWorkoutDetail,
+  fetchWorkoutPerformance,
+  type Workout,
+} from "../api";
 import { getWorkoutDisplayName } from "../components/workouts/workoutNames";
 import HRTimelineChart from "../components/workouts/HRTimelineChart";
 import HRZoneBars from "../components/workouts/HRZoneBars";
+import PerformanceOverview from "../components/workouts/PerformanceOverview";
 import RouteMap from "../components/workouts/RouteMap";
 import { formatUsDateTime } from "../utils/dateTime";
 
@@ -23,6 +28,11 @@ export default function WorkoutDetailPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["workout", id],
     queryFn: () => fetchWorkoutDetail(id!),
+    enabled: !!id && !isSynthetic,
+  });
+  const { data: performance, isLoading: isPerformanceLoading } = useQuery({
+    queryKey: ["workout-performance", id],
+    queryFn: () => fetchWorkoutPerformance(id!),
     enabled: !!id && !isSynthetic,
   });
 
@@ -67,44 +77,53 @@ export default function WorkoutDetailPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        <StatCard label="Duration" value={formatDuration(w.DurationSec)} />
-        {w.ActiveEnergyBurned != null && (
-          <StatCard
-            label="Active Cal"
-            value={`${Math.round(w.ActiveEnergyBurned)}`}
-            unit="kcal"
-          />
-        )}
-        {w.AvgHeartRate != null && (
-          <StatCard
-            label="Avg HR"
-            value={`${Math.round(w.AvgHeartRate)}`}
-            unit="bpm"
-          />
-        )}
-        {w.MaxHeartRate != null && (
-          <StatCard
-            label="Max HR"
-            value={`${Math.round(w.MaxHeartRate)}`}
-            unit="bpm"
-          />
-        )}
-        {w.Distance != null && w.Distance > 0 && (
-          <StatCard
-            label="Distance"
-            value={w.Distance.toFixed(2)}
-            unit={w.DistanceUnits}
-          />
-        )}
-        {w.ElevationUp != null && w.ElevationUp > 0 && (
-          <StatCard
-            label="Elev. Gain"
-            value={`${Math.round(w.ElevationUp)}`}
-            unit="m"
-          />
-        )}
+      {!isSynthetic && isPerformanceLoading && (
+        <div className="h-96 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900" />
+      )}
+      {performance && <PerformanceOverview performance={performance} workout={w} />}
+
+      <div>
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
+          Workout summary
+        </h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+          <StatCard label="Duration" value={formatDuration(w.DurationSec)} />
+          {w.ActiveEnergyBurned != null && (
+            <StatCard
+              label="Active Cal"
+              value={`${Math.round(w.ActiveEnergyBurned)}`}
+              unit="kcal"
+            />
+          )}
+          {w.AvgHeartRate != null && (
+            <StatCard
+              label="Avg HR"
+              value={`${Math.round(w.AvgHeartRate)}`}
+              unit="bpm"
+            />
+          )}
+          {w.MaxHeartRate != null && (
+            <StatCard
+              label="Max HR"
+              value={`${Math.round(w.MaxHeartRate)}`}
+              unit="bpm"
+            />
+          )}
+          {w.Distance != null && w.Distance > 0 && (
+            <StatCard
+              label="Distance"
+              value={w.Distance.toFixed(2)}
+              unit={w.DistanceUnits}
+            />
+          )}
+          {w.ElevationUp != null && w.ElevationUp > 0 && (
+            <StatCard
+              label="Elev. Gain"
+              value={`${Math.round(w.ElevationUp)}`}
+              unit="m"
+            />
+          )}
+        </div>
       </div>
 
       {hasHR && <HRTimelineChart hrData={data!.HeartRateData!} />}

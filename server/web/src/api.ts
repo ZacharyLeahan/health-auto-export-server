@@ -160,6 +160,9 @@ export interface Workout {
   MinHeartRate: number | null;
   ElevationUp: number | null;
   ElevationDown: number | null;
+  WorkoutScale: "snack" | "real";
+  HeatScore: number | null;
+  HeatLabel: "Chill" | "Warm" | "Hot" | "On fire" | null;
   alpha_session_name?: string;
 }
 
@@ -183,6 +186,30 @@ export interface WorkoutDetail extends Workout {
   RouteData: WorkoutRoute[] | null;
 }
 
+export interface WorkoutPerformanceSummary {
+  durationSec: number;
+  avgHeartRate: number | null;
+  effortSeconds: number | null;
+  effortCount: number | null;
+  recoverySeconds: number | null;
+  recoveryCount: number | null;
+  effortRecoveryRatio: number | null;
+}
+
+export interface WorkoutPerformanceBenchmark {
+  weeklyBest: number | null;
+  monthlyBest: number | null;
+  monthlyAverage: number | null;
+}
+
+export interface WorkoutPerformance {
+  current: WorkoutPerformanceSummary;
+  benchmarks: Record<keyof WorkoutPerformanceSummary, WorkoutPerformanceBenchmark>;
+  comparisonWorkoutCount: number;
+  weeklyWorkoutCount: number;
+  workoutType: string;
+}
+
 export async function fetchWorkouts(
   start: string,
   end: string,
@@ -197,6 +224,14 @@ export async function fetchWorkouts(
 
 export async function fetchWorkoutDetail(id: string): Promise<WorkoutDetail> {
   const res = await fetch(`${BASE}/workouts/${id}`);
+  if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchWorkoutPerformance(
+  id: string
+): Promise<WorkoutPerformance> {
+  const res = await fetch(`${BASE}/workouts/${id}/performance`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }

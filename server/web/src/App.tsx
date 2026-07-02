@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 
 const SleepPage = lazy(() => import("./pages/SleepPage"));
 const GoalsPage = lazy(() => import("./pages/GoalsPage"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const WorkoutsPage = lazy(() => import("./pages/WorkoutsPage"));
 const WorkoutDetailPage = lazy(() => import("./pages/WorkoutDetailPage"));
 const MetricsPage = lazy(() => import("./pages/MetricsPage"));
@@ -46,6 +47,14 @@ export default function App() {
           element={
             <Page>
               <GoalsPage />
+            </Page>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <Page>
+              <CalendarPage />
             </Page>
           }
         />

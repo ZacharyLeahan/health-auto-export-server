@@ -16,9 +16,18 @@ const outdoorNames: Record<string, string> = {
   Rowing: "Outdoor Rowing",
 };
 
+const displayAliases: Record<string, string> = {
+  "High Intensity Interval Training": "HIIT",
+  "Traditional Strength Training": "Lifting",
+  "Functional Strength Training": "Calisthenics",
+};
+
 export function getWorkoutDisplayName(w: Workout): string {
   if (w.alpha_session_name) {
     return w.alpha_session_name;
+  }
+  if (w.Name in displayAliases) {
+    return displayAliases[w.Name];
   }
   if (w.IsIndoor === true && w.Name in indoorNames) {
     return indoorNames[w.Name];
