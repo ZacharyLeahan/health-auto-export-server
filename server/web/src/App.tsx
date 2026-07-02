@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import DashboardPage from "./pages/DashboardPage";
 
 const SleepPage = lazy(() => import("./pages/SleepPage"));
+const GoalsPage = lazy(() => import("./pages/GoalsPage"));
 const WorkoutsPage = lazy(() => import("./pages/WorkoutsPage"));
 const WorkoutDetailPage = lazy(() => import("./pages/WorkoutDetailPage"));
 const MetricsPage = lazy(() => import("./pages/MetricsPage"));
@@ -38,6 +39,14 @@ export default function App() {
             <ErrorBoundary>
               <DashboardPage />
             </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/goals"
+          element={
+            <Page>
+              <GoalsPage />
+            </Page>
           }
         />
         <Route

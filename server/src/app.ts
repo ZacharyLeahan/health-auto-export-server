@@ -6,6 +6,7 @@ import express from 'express';
 import mongodb from './database/mongodb';
 import { requireWriteAuth } from './middleware/auth';
 import dashboardRouter from './routes/dashboard';
+import fitnessGoalsRouter from './routes/fitnessGoals';
 import ingesterRouter from './routes/ingester';
 import metricsRouter from './routes/metrics';
 import workoutsRouter from './routes/workouts';
@@ -35,6 +36,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api/metrics', metricsRouter);
 app.use('/api/workouts', workoutsRouter);
 app.use('/dashboard/api/v1', dashboardRouter);
+app.use('/dashboard/api/v1', fitnessGoalsRouter);
 
 const webDistPath = path.join(__dirname, '../web/dist');
 app.use('/dashboard', express.static(webDistPath));
