@@ -275,28 +275,6 @@ async function getScalarValues(name: string, start: Date, end: Date): Promise<nu
     .filter((value): value is number => typeof value === 'number' && !Number.isNaN(value));
 }
 
-function pearsonR(xs: number[], ys: number[]): number | null {
-  if (xs.length !== ys.length || xs.length < 2) return null;
-
-  const meanX = xs.reduce((sum, value) => sum + value, 0) / xs.length;
-  const meanY = ys.reduce((sum, value) => sum + value, 0) / ys.length;
-
-  let numerator = 0;
-  let denomX = 0;
-  let denomY = 0;
-
-  for (let i = 0; i < xs.length; i += 1) {
-    const dx = xs[i] - meanX;
-    const dy = ys[i] - meanY;
-    numerator += dx * dy;
-    denomX += dx * dx;
-    denomY += dy * dy;
-  }
-
-  const denominator = Math.sqrt(denomX * denomY);
-  return denominator === 0 ? null : numerator / denominator;
-}
-
 router.get('/version', (_req: Request, res: Response) => {
   res.json({ version: 'health-auto-dashboard' });
 });
@@ -401,50 +379,6 @@ router.get('/metrics/stats', async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load metric stats' });
-  }
-});
-
-router.get('/correlation', async (req: Request, res: Response) => {
-  try {
-    const xMetric = String(req.query.x || '');
-    const yMetric = String(req.query.y || '');
-    if (!xMetric || !yMetric) {
-      res.status(400).json({ error: 'x and y metric parameters required' });
-      return;
-    }
-
-    const { start, end } = parseRange(req);
-    const unit = bucketUnit(String(req.query.bucket || '1 day').replace('1 ', ''));
-
-    const [xSeries, ySeries] = await Promise.all([
-      aggregateTimeSeries(xMetric, start, end, unit === 'hour' ? 'hour' : 'day'),
-      aggregateTimeSeries(yMetric, start, end, unit === 'hour' ? 'hour' : 'day'),
-    ]);
-
-    const yByTime = new Map(
-      ySeries.map((point) => [point.time as string, point.avg as number | null]),
-    );
-    const points: Record<string, unknown>[] = [];
-    const xs: number[] = [];
-    const ys: number[] = [];
-
-    for (const point of xSeries) {
-      const y = yByTime.get(point.time as string) ?? null;
-      const x = point.avg as number | null;
-      points.push({ time: point.time, x, y });
-      if (typeof x === 'number' && typeof y === 'number') {
-        xs.push(x);
-        ys.push(y);
-      }
-    }
-
-    res.json({
-      points,
-      pearson_r: pearsonR(xs, ys),
-      count: xs.length,
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load correlation' });
   }
 });
 
