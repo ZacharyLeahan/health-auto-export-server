@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Workout } from "../../api";
 import { formatUsDate, formatUsTime } from "../../utils/dateTime";
 import { getWorkoutDisplayName, getWorkoutFilterKey } from "./workoutNames";
+import WorkoutBadges from "./WorkoutBadges";
 
 const PAGE_SIZE = 10;
 
@@ -33,6 +34,31 @@ export default function WorkoutList({
   const pageStart = page * PAGE_SIZE;
   const pageEnd = pageStart + PAGE_SIZE;
   const pageWorkouts = workouts.slice(pageStart, pageEnd);
+  const dailyTotals = new Map<
+    string,
+    { snacks: number; real: number; durationMinutes: number }
+  >();
+  for (const workout of workouts) {
+    const date = formatUsDate(workout.StartTime, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+    const totals = dailyTotals.get(date) ?? {
+      snacks: 0,
+      real: 0,
+      durationMinutes: 0,
+    };
+    if (workout.WorkoutScale === "real") {
+      totals.real += 1;
+    } else {
+      totals.snacks += 1;
+    }
+    // Match the whole-minute value rendered in each workout row so the
+    // visible durations always add up exactly to the daily summary.
+    totals.durationMinutes += Math.floor(workout.DurationSec / 60);
+    dailyTotals.set(date, totals);
+  }
 
   return (
     <div className="space-y-4">
@@ -54,7 +80,7 @@ export default function WorkoutList({
         </div>
       )}
 
-      <WorkoutListView workouts={pageWorkouts} />
+      <WorkoutListView workouts={pageWorkouts} dailyTotals={dailyTotals} />
 
       {workouts.length === 0 && (
         <div className="text-zinc-500 text-sm p-4 bg-zinc-900 rounded-lg">
@@ -102,7 +128,21 @@ function formatDuration(sec: number): string {
   return `${m}m`;
 }
 
-function WorkoutListView({ workouts }: { workouts: Workout[] }) {
+function formatAggregateDuration(minutes: number): string {
+  if (minutes >= 60) return `${(minutes / 60).toFixed(1)} hr`;
+  return `${minutes} min`;
+}
+
+function WorkoutListView({
+  workouts,
+  dailyTotals,
+}: {
+  workouts: Workout[];
+  dailyTotals: Map<
+    string,
+    { snacks: number; real: number; durationMinutes: number }
+  >;
+}) {
   // Group by date
   const groups: { date: string; workouts: Workout[] }[] = [];
   let currentDate = "";
@@ -124,8 +164,16 @@ function WorkoutListView({ workouts }: { workouts: Workout[] }) {
     <div className="space-y-1">
       {groups.map((group) => (
         <div key={group.date}>
-          <div className="text-xs text-zinc-500 font-medium px-3 py-1.5 bg-zinc-900/50">
-            {group.date}
+          <div className="flex items-center justify-between gap-3 bg-zinc-900/50 px-3 py-1.5 text-xs font-medium text-zinc-500">
+            <span>{group.date}</span>
+            <span className="tabular-nums text-zinc-600">
+              {dailyTotals.get(group.date)?.snacks ?? 0}{" "}
+              {(dailyTotals.get(group.date)?.snacks ?? 0) === 1 ? "snack" : "snacks"} ·{" "}
+              {dailyTotals.get(group.date)?.real ?? 0} real ·{" "}
+              {formatAggregateDuration(
+                dailyTotals.get(group.date)?.durationMinutes ?? 0,
+              )}
+            </span>
           </div>
           {group.workouts.map((w) => (
             <Link
@@ -140,6 +188,7 @@ function WorkoutListView({ workouts }: { workouts: Workout[] }) {
               <span className="text-zinc-100 font-medium min-w-0 truncate flex-1">
                 {getWorkoutDisplayName(w)}
               </span>
+              <WorkoutBadges workout={w} compact />
               <span className="text-zinc-400 tabular-nums shrink-0">
                 {formatDuration(w.DurationSec)}
               </span>

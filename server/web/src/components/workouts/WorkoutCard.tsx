@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Workout } from "../../api";
 import { formatUsDate } from "../../utils/dateTime";
+import { getWorkoutDisplayName } from "./workoutNames";
 
 function formatDuration(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -28,7 +29,7 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium text-zinc-100 truncate">
-            {workout.Name}
+            {getWorkoutDisplayName(workout)}
           </div>
           <div className="text-xs text-zinc-500 mt-1">
             {formatDate(workout.StartTime)}

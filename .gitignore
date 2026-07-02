@@ -7,3 +7,4 @@ server/web/node_modules
 server/web/dist
 
 seed_data/*
+.DS_Store

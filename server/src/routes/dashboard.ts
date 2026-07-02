@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 
-import { RouteModel, WorkoutModel } from '../models/Workout';
 import { SleepModel } from '../models/Metric';
+import { RouteModel, WorkoutModel } from '../models/Workout';
 
 const router = Router();
 
@@ -214,9 +214,12 @@ async function aggregateTimeSeries(
   if (!db) return [];
 
   const kind = metricKind(name);
-  const avgField = kind === 'heart_rate' ? '$Avg' : kind === 'blood_pressure' ? '$systolic' : '$qty';
-  const minField = kind === 'heart_rate' ? '$Min' : kind === 'blood_pressure' ? '$diastolic' : '$qty';
-  const maxField = kind === 'heart_rate' ? '$Max' : kind === 'blood_pressure' ? '$systolic' : '$qty';
+  const avgField =
+    kind === 'heart_rate' ? '$Avg' : kind === 'blood_pressure' ? '$systolic' : '$qty';
+  const minField =
+    kind === 'heart_rate' ? '$Min' : kind === 'blood_pressure' ? '$diastolic' : '$qty';
+  const maxField =
+    kind === 'heart_rate' ? '$Max' : kind === 'blood_pressure' ? '$systolic' : '$qty';
 
   const rows = await db
     .collection(name)
@@ -252,11 +255,7 @@ function stddev(values: number[]): number | null {
   return Math.sqrt(variance);
 }
 
-async function getScalarValues(
-  name: string,
-  start: Date,
-  end: Date,
-): Promise<number[]> {
+async function getScalarValues(name: string, start: Date, end: Date): Promise<number[]> {
   const db = mongoose.connection.db;
   if (!db) return [];
 
@@ -422,7 +421,9 @@ router.get('/correlation', async (req: Request, res: Response) => {
       aggregateTimeSeries(yMetric, start, end, unit === 'hour' ? 'hour' : 'day'),
     ]);
 
-    const yByTime = new Map(ySeries.map((point) => [point.time as string, point.avg as number | null]));
+    const yByTime = new Map(
+      ySeries.map((point) => [point.time as string, point.avg as number | null]),
+    );
     const points: Record<string, unknown>[] = [];
     const xs: number[] = [];
     const ys: number[] = [];
@@ -566,15 +567,68 @@ router.get('/sleep', async (req: Request, res: Response) => {
           Source: record.source,
         };
       })
-      .sort(
-        (a, b) => new Date(a.StartTime).getTime() - new Date(b.StartTime).getTime(),
-      );
+      .sort((a, b) => new Date(a.StartTime).getTime() - new Date(b.StartTime).getTime());
 
     res.json({ sessions: mappedSessions, stages: stageTimeline });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load sleep data' });
   }
 });
+
+type WorkoutScale = 'snack' | 'real';
+type WorkoutHeatLabel = 'Chill' | 'Warm' | 'Hot' | 'On fire';
+
+function getWorkoutBadges(
+  durationSec: number,
+  heartRateData?: Array<{ Avg: number; date: Date }>,
+): {
+  workoutScale: WorkoutScale;
+  heatScore: number | null;
+  heatLabel: WorkoutHeatLabel | null;
+} {
+  const workoutScale: WorkoutScale = durationSec > 15 * 60 ? 'real' : 'snack';
+  if (!heartRateData || heartRateData.length === 0) {
+    return { workoutScale, heatScore: null, heatLabel: null };
+  }
+
+  const samples = [...heartRateData].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+  const average = samples.reduce((sum, sample) => sum + sample.Avg, 0) / samples.length;
+  let trackedSeconds = 0;
+  let above100Seconds = 0;
+  let above120Seconds = 0;
+  let above140Seconds = 0;
+
+  for (let index = 0; index < samples.length - 1; index += 1) {
+    const seconds =
+      (new Date(samples[index + 1].date).getTime() - new Date(samples[index].date).getTime()) /
+      1000;
+    if (seconds <= 0 || seconds > 600) continue;
+    trackedSeconds += seconds;
+    if (samples[index].Avg >= 100) above100Seconds += seconds;
+    if (samples[index].Avg >= 120) above120Seconds += seconds;
+    if (samples[index].Avg >= 140) above140Seconds += seconds;
+  }
+
+  const sampleRatio = (threshold: number) =>
+    samples.filter((sample) => sample.Avg >= threshold).length / samples.length;
+  const ratio100 = trackedSeconds > 0 ? above100Seconds / trackedSeconds : sampleRatio(100);
+  const ratio120 = trackedSeconds > 0 ? above120Seconds / trackedSeconds : sampleRatio(120);
+  const ratio140 = trackedSeconds > 0 ? above140Seconds / trackedSeconds : sampleRatio(140);
+
+  let heatScore = 0;
+  if (average >= 130 || ratio140 >= 0.2 || ratio120 >= 0.65) {
+    heatScore = 3;
+  } else if (average >= 110 || ratio120 >= 0.25 || ratio100 >= 0.75) {
+    heatScore = 2;
+  } else if (average >= 95 || ratio100 >= 0.25) {
+    heatScore = 1;
+  }
+
+  const labels: WorkoutHeatLabel[] = ['Chill', 'Warm', 'Hot', 'On fire'];
+  return { workoutScale, heatScore, heatLabel: labels[heatScore] };
+}
 
 router.get('/workouts', async (req: Request, res: Response) => {
   try {
@@ -590,6 +644,7 @@ router.get('/workouts', async (req: Request, res: Response) => {
 
     res.json(
       workouts.map((workout) => {
+        const badges = getWorkoutBadges(workout.duration, workout.heartRateData);
         const avgHeartRate =
           workout.heartRateData && workout.heartRateData.length > 0
             ? workout.heartRateData.reduce((sum, hr) => sum + hr.Avg, 0) /
@@ -625,11 +680,196 @@ router.get('/workouts', async (req: Request, res: Response) => {
           MinHeartRate: minHeartRate,
           ElevationUp: workout.elevationUp?.qty ?? null,
           ElevationDown: workout.elevationDown?.qty ?? null,
+          WorkoutScale: badges.workoutScale,
+          HeatScore: badges.heatScore,
+          HeatLabel: badges.heatLabel,
         };
       }),
     );
   } catch (error) {
     res.status(500).json({ error: 'Failed to load workouts' });
+  }
+});
+
+type PerformanceMetric =
+  | 'durationSec'
+  | 'avgHeartRate'
+  | 'effortSeconds'
+  | 'effortCount'
+  | 'recoverySeconds'
+  | 'recoveryCount'
+  | 'effortRecoveryRatio';
+
+interface PerformanceSummary {
+  durationSec: number;
+  avgHeartRate: number | null;
+  effortSeconds: number | null;
+  effortCount: number | null;
+  recoverySeconds: number | null;
+  recoveryCount: number | null;
+  effortRecoveryRatio: number | null;
+}
+
+interface HeartRateSample {
+  Avg: number;
+  date: Date;
+}
+
+const PERFORMANCE_METRICS: PerformanceMetric[] = [
+  'durationSec',
+  'avgHeartRate',
+  'effortSeconds',
+  'effortCount',
+  'recoverySeconds',
+  'recoveryCount',
+  'effortRecoveryRatio',
+];
+
+function summarizeWorkoutPerformance(
+  durationSec: number,
+  heartRateData?: HeartRateSample[],
+): PerformanceSummary {
+  if (!heartRateData || heartRateData.length < 2) {
+    return {
+      durationSec,
+      avgHeartRate: null,
+      effortSeconds: null,
+      effortCount: null,
+      recoverySeconds: null,
+      recoveryCount: null,
+      effortRecoveryRatio: null,
+    };
+  }
+
+  const samples = [...heartRateData].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+  const avgHeartRate = samples.reduce((sum, sample) => sum + sample.Avg, 0) / samples.length;
+  let effortSeconds = 0;
+  let recoverySeconds = 0;
+  let effortRun = 0;
+  let recoveryRun = 0;
+  let effortCount = 0;
+  let recoveryCount = 0;
+
+  const closeRuns = () => {
+    if (effortRun >= 30) effortCount += 1;
+    if (recoveryRun >= 240) recoveryCount += 1;
+    effortRun = 0;
+    recoveryRun = 0;
+  };
+
+  for (let index = 0; index < samples.length - 1; index += 1) {
+    const current = samples[index];
+    const next = samples[index + 1];
+    const seconds = (new Date(next.date).getTime() - new Date(current.date).getTime()) / 1000;
+
+    // A large gap is not evidence that the heart rate stayed in the same state.
+    if (seconds <= 0 || seconds > 600) {
+      closeRuns();
+      continue;
+    }
+
+    if (current.Avg >= 100) {
+      if (recoveryRun > 0) {
+        if (recoveryRun >= 240) recoveryCount += 1;
+        recoveryRun = 0;
+      }
+      effortSeconds += seconds;
+      effortRun += seconds;
+    } else {
+      if (effortRun > 0) {
+        if (effortRun >= 30) effortCount += 1;
+        effortRun = 0;
+      }
+      recoverySeconds += seconds;
+      recoveryRun += seconds;
+    }
+  }
+  closeRuns();
+
+  return {
+    durationSec,
+    avgHeartRate,
+    effortSeconds,
+    effortCount,
+    recoverySeconds,
+    recoveryCount,
+    effortRecoveryRatio: effortCount / Math.max(1, recoveryCount),
+  };
+}
+
+function benchmarkMetric(
+  metric: PerformanceMetric,
+  weekly: PerformanceSummary[],
+  monthly: PerformanceSummary[],
+) {
+  const lowerIsBetter = metric === 'recoverySeconds' || metric === 'recoveryCount';
+  const weeklyValues = weekly
+    .map((summary) => summary[metric])
+    .filter((value): value is number => value != null);
+  const monthlyValues = monthly
+    .map((summary) => summary[metric])
+    .filter((value): value is number => value != null);
+
+  return {
+    weeklyBest:
+      weeklyValues.length > 0
+        ? lowerIsBetter
+          ? Math.min(...weeklyValues)
+          : Math.max(...weeklyValues)
+        : null,
+    monthlyBest:
+      monthlyValues.length > 0
+        ? lowerIsBetter
+          ? Math.min(...monthlyValues)
+          : Math.max(...monthlyValues)
+        : null,
+    monthlyAverage:
+      monthlyValues.length > 0
+        ? monthlyValues.reduce((sum, value) => sum + value, 0) / monthlyValues.length
+        : null,
+  };
+}
+
+router.get('/workouts/:id/performance', async (req: Request, res: Response) => {
+  try {
+    const workout = await WorkoutModel.findOne({ workoutId: req.params.id }).lean();
+    if (!workout) {
+      res.status(404).json({ error: 'workout not found' });
+      return;
+    }
+
+    const workoutStart = new Date(workout.start);
+    const monthStart = new Date(workoutStart.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const weekStart = new Date(workoutStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const priorWorkouts = await WorkoutModel.find({
+      name: workout.name,
+      start: { $gte: monthStart, $lt: workoutStart },
+    })
+      .sort({ start: -1 })
+      .lean();
+
+    const monthly = priorWorkouts.map((prior) =>
+      summarizeWorkoutPerformance(prior.duration, prior.heartRateData),
+    );
+    const weekly = priorWorkouts
+      .filter((prior) => new Date(prior.start) >= weekStart)
+      .map((prior) => summarizeWorkoutPerformance(prior.duration, prior.heartRateData));
+    const benchmarks = Object.fromEntries(
+      PERFORMANCE_METRICS.map((metric) => [metric, benchmarkMetric(metric, weekly, monthly)]),
+    );
+
+    res.json({
+      current: summarizeWorkoutPerformance(workout.duration, workout.heartRateData),
+      benchmarks,
+      comparisonWorkoutCount: monthly.length,
+      weeklyWorkoutCount: weekly.length,
+      workoutType: workout.name,
+    });
+  } catch (error) {
+    console.error('workout performance error:', error);
+    res.status(500).json({ error: 'Failed to load workout performance' });
   }
 });
 
@@ -642,6 +882,7 @@ router.get('/workouts/:id', async (req: Request, res: Response) => {
     }
 
     const route = await RouteModel.findOne({ workoutId: req.params.id }).lean();
+    const badges = getWorkoutBadges(workout.duration, workout.heartRateData);
     const avgHeartRate =
       workout.heartRateData && workout.heartRateData.length > 0
         ? workout.heartRateData.reduce((sum, hr) => sum + hr.Avg, 0) / workout.heartRateData.length
@@ -674,6 +915,9 @@ router.get('/workouts/:id', async (req: Request, res: Response) => {
           : null,
       ElevationUp: workout.elevationUp?.qty ?? null,
       ElevationDown: workout.elevationDown?.qty ?? null,
+      WorkoutScale: badges.workoutScale,
+      HeatScore: badges.heatScore,
+      HeatLabel: badges.heatLabel,
       HeartRateData:
         workout.heartRateData?.map((hr) => ({
           Time: new Date(hr.date).toISOString(),
