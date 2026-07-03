@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 
 import { WorkoutModel } from '../models/Workout';
+import { getWorkoutScale, REAL_WORKOUT_MIN_DURATION_SECONDS } from '../utils/workoutClassification';
 
 const router = Router();
 
@@ -99,9 +100,15 @@ router.get('/goals/weekly', async (_req: Request, res: Response) => {
   try {
     const now = new Date();
     const windowStart = new Date(now.getTime() - ROLLING_DAYS * DAY_MS);
-    const [workouts, threshold] = await Promise.all([
+    const [workouts, latestRealWorkout, threshold] = await Promise.all([
       WorkoutModel.find({
         start: { $gte: windowStart, $lte: now },
+      })
+        .sort({ start: -1 })
+        .lean(),
+      WorkoutModel.findOne({
+        start: { $lte: now },
+        duration: { $gt: REAL_WORKOUT_MIN_DURATION_SECONDS },
       })
         .sort({ start: -1 })
         .lean(),
@@ -117,6 +124,7 @@ router.get('/goals/weekly', async (_req: Request, res: Response) => {
       const flexibility = isFlexibility(workout.name);
       const cardio = !lifting && !flexibility;
       const heartRate = measuredHeartRateSeconds(workout.heartRateData, threshold.thresholdBpm);
+      const workoutScale = getWorkoutScale(workout.duration);
 
       if (cardio) cardioWorkoutSeconds += workout.duration;
       elevatedHeartRateSeconds += heartRate.elevatedSeconds;
@@ -127,6 +135,7 @@ router.get('/goals/weekly', async (_req: Request, res: Response) => {
         name: workout.name,
         start: new Date(workout.start).toISOString(),
         durationSeconds: workout.duration,
+        workoutScale,
         category: lifting ? 'lifting' : flexibility ? 'flexibility' : 'cardio',
         qualifiesForLifting: lifting && workout.duration >= LIFTING_MIN_DURATION_SECONDS,
         qualifiesForFlexibility: flexibility && workout.duration > FLEXIBILITY_MIN_DURATION_SECONDS,
@@ -141,6 +150,20 @@ router.get('/goals/weekly', async (_req: Request, res: Response) => {
     const qualifyingFlexibilitySessions = workoutRows.filter(
       (workout) => workout.qualifiesForFlexibility,
     ).length;
+    const hoursSinceRealWorkout =
+      latestRealWorkout == null
+        ? null
+        : (now.getTime() - new Date(latestRealWorkout.start).getTime()) / (60 * 60 * 1000);
+    const daysSinceRealWorkout =
+      hoursSinceRealWorkout == null ? null : Math.floor(hoursSinceRealWorkout / 24);
+    const realWorkoutCadenceStatus =
+      daysSinceRealWorkout == null
+        ? 'critical'
+        : daysSinceRealWorkout <= 1
+          ? 'ok'
+          : daysSinceRealWorkout <= 2
+            ? 'warning'
+            : 'critical';
 
     res.setHeader('Cache-Control', 'private, max-age=30');
     res.json({
@@ -176,6 +199,22 @@ router.get('/goals/weekly', async (_req: Request, res: Response) => {
         ...threshold,
         method: '30-day resting median + 30 BPM, with a 90 BPM minimum',
         maximumSampleGapSeconds: MAX_HEART_RATE_GAP_SECONDS,
+      },
+      realWorkoutCadence: {
+        status: realWorkoutCadenceStatus,
+        daysSinceRealWorkout,
+        hoursSinceRealWorkout:
+          hoursSinceRealWorkout == null ? null : Math.round(hoursSinceRealWorkout * 10) / 10,
+        minimumDurationSeconds: REAL_WORKOUT_MIN_DURATION_SECONDS,
+        latestRealWorkout:
+          latestRealWorkout == null
+            ? null
+            : {
+                id: latestRealWorkout.workoutId,
+                name: latestRealWorkout.name,
+                start: new Date(latestRealWorkout.start).toISOString(),
+                durationSeconds: latestRealWorkout.duration,
+              },
       },
       workouts: workoutRows,
     });
