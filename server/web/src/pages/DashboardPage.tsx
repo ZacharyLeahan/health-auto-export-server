@@ -39,9 +39,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <DailyOverview />
-
-      <div className="mt-8">
+      <div>
         <div className="flex flex-wrap items-center gap-4 mb-4">
           {!isLoading && (
             <MetricSelector
@@ -70,6 +68,10 @@ export default function DashboardPage() {
           agg={agg}
           multiplier={selected?.multiplier ?? 1}
         />
+      </div>
+
+      <div className="mt-8">
+        <DailyOverview />
       </div>
     </>
   );

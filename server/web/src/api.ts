@@ -259,6 +259,39 @@ export async function fetchWorkoutSets(
   return res.json();
 }
 
+// --- Correlation ---
+
+export interface CorrelationPoint {
+  time: string;
+  x: number | null;
+  y: number | null;
+}
+
+export interface CorrelationResponse {
+  points: CorrelationPoint[];
+  pearson_r: number | null;
+  count: number;
+}
+
+export async function fetchCorrelation(
+  xMetric: string,
+  yMetric: string,
+  start: string,
+  end: string,
+  bucket: string = '1 day',
+): Promise<CorrelationResponse> {
+  const params = new URLSearchParams({
+    x: xMetric,
+    y: yMetric,
+    start,
+    end,
+    bucket,
+  });
+  const res = await fetch(`${BASE}/correlation?${params}`);
+  if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
 // --- Stats ---
 
 export interface WorkoutTypeStat {

@@ -6,6 +6,8 @@ const NAV_ITEMS = [
   { to: '/calendar', label: 'Calendar' },
   { to: '/sleep', label: 'Sleep' },
   { to: '/workouts', label: 'Workouts' },
+  { to: '/correlations', label: 'Correlations' },
+  { to: '/trends', label: 'Trends' },
   { to: '/raw', label: 'Raw' },
 ];
 

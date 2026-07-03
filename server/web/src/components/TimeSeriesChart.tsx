@@ -34,15 +34,26 @@ export default function TimeSeriesChart({
       return { opts: null, plotData: null };
     }
 
-    const times = data.map((p: TimeSeriesPoint) =>
-      Math.floor(new Date(p.time).getTime() / 1000)
-    );
-    const values = data.map(
-      (p: TimeSeriesPoint) => {
-        const v = p.avg ?? p.min ?? p.max ?? null;
-        return v != null ? v * multiplier : null;
-      }
-    );
+    const points = data
+      .map((point: TimeSeriesPoint) => {
+        const time = Math.floor(new Date(point.time).getTime() / 1000);
+        const rawValue = point.avg ?? point.min ?? point.max;
+        const value = rawValue === null ? null : rawValue * multiplier;
+        return { time, value };
+      })
+      .filter(
+        (point): point is { time: number; value: number } =>
+          Number.isFinite(point.time) &&
+          point.value !== null &&
+          Number.isFinite(point.value),
+      );
+
+    if (points.length === 0) {
+      return { opts: null, plotData: null };
+    }
+
+    const times = new Float64Array(points.map((point) => point.time));
+    const values = new Float64Array(points.map((point) => point.value));
 
     const opts: uPlot.Options = {
       width: 0,
@@ -77,7 +88,7 @@ export default function TimeSeriesChart({
 
     return {
       opts,
-      plotData: [new Float64Array(times), values] as uPlot.AlignedData,
+      plotData: [times, values] as uPlot.AlignedData,
     };
   }, [data, label, unit, multiplier]);
 
@@ -88,11 +99,7 @@ export default function TimeSeriesChart({
   }
 
   if (error || !opts || !plotData) {
-    return (
-      <div className="bg-zinc-900 rounded-lg p-6 text-zinc-500 text-sm">
-        No data available for {label} in this time range.
-      </div>
-    );
+    return null;
   }
 
   return (
