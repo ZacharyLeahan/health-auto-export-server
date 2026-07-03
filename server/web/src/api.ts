@@ -1,4 +1,4 @@
-const BASE = "/dashboard/api/v1";
+const BASE = '/dashboard/api/v1';
 
 // --- Version ---
 
@@ -76,7 +76,7 @@ export async function fetchTimeSeries(
   metric: string,
   start: string,
   end: string,
-  agg: string = "daily"
+  agg: string = 'daily',
 ): Promise<TimeSeriesPoint[]> {
   const params = new URLSearchParams({ metric, start, end, agg });
   const res = await fetch(`${BASE}/timeseries?${params}`);
@@ -87,7 +87,7 @@ export async function fetchTimeSeries(
 export async function fetchMetricStats(
   metric: string,
   start: string,
-  end: string
+  end: string,
 ): Promise<MetricStats> {
   const params = new URLSearchParams({ metric, start, end });
   const res = await fetch(`${BASE}/metrics/stats?${params}`);
@@ -127,10 +127,7 @@ export interface SleepResponse {
   stages: SleepStage[];
 }
 
-export async function fetchSleep(
-  start: string,
-  end: string
-): Promise<SleepResponse> {
+export async function fetchSleep(start: string, end: string): Promise<SleepResponse> {
   const params = new URLSearchParams({ start, end });
   const res = await fetch(`${BASE}/sleep?${params}`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
@@ -160,9 +157,9 @@ export interface Workout {
   MinHeartRate: number | null;
   ElevationUp: number | null;
   ElevationDown: number | null;
-  WorkoutScale: "snack" | "real";
+  WorkoutScale: 'snack' | 'real';
   HeatScore: number | null;
-  HeatLabel: "Chill" | "Warm" | "Hot" | "On fire" | null;
+  HeatLabel: 'Chill' | 'Warm' | 'Hot' | 'On fire' | null;
   alpha_session_name?: string;
 }
 
@@ -210,13 +207,9 @@ export interface WorkoutPerformance {
   workoutType: string;
 }
 
-export async function fetchWorkouts(
-  start: string,
-  end: string,
-  type?: string
-): Promise<Workout[]> {
+export async function fetchWorkouts(start: string, end: string, type?: string): Promise<Workout[]> {
   const params = new URLSearchParams({ start, end });
-  if (type) params.set("type", type);
+  if (type) params.set('type', type);
   const res = await fetch(`${BASE}/workouts?${params}`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
@@ -228,9 +221,7 @@ export async function fetchWorkoutDetail(id: string): Promise<WorkoutDetail> {
   return res.json();
 }
 
-export async function fetchWorkoutPerformance(
-  id: string
-): Promise<WorkoutPerformance> {
+export async function fetchWorkoutPerformance(id: string): Promise<WorkoutPerformance> {
   const res = await fetch(`${BASE}/workouts/${id}/performance`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
@@ -257,13 +248,13 @@ export interface WorkoutSet {
 export async function fetchWorkoutSets(
   id: string,
   start?: string,
-  end?: string
+  end?: string,
 ): Promise<WorkoutSet[]> {
   const params = new URLSearchParams();
-  if (start) params.set("start", start);
-  if (end) params.set("end", end);
+  if (start) params.set('start', start);
+  if (end) params.set('end', end);
   const qs = params.toString();
-  const res = await fetch(`${BASE}/workouts/${id}/sets${qs ? "?" + qs : ""}`);
+  const res = await fetch(`${BASE}/workouts/${id}/sets${qs ? '?' + qs : ''}`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }
@@ -287,7 +278,7 @@ export async function fetchCorrelation(
   yMetric: string,
   start: string,
   end: string,
-  bucket: string = "1 day"
+  bucket: string = '1 day',
 ): Promise<CorrelationResponse> {
   const params = new URLSearchParams({
     x: xMetric,
@@ -346,9 +337,7 @@ export interface ImportLog {
   metadata: Record<string, unknown> | null;
 }
 
-export async function fetchImportLogs(
-  limit: number = 50
-): Promise<ImportLog[]> {
+export async function fetchImportLogs(limit: number = 50): Promise<ImportLog[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   const res = await fetch(`${BASE}/import-logs?${params}`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
@@ -358,11 +347,11 @@ export async function fetchImportLogs(
 // --- Alpha CSV Upload ---
 
 export async function uploadAlphaCSV(
-  file: File
+  file: File,
 ): Promise<{ sets_received: number; sets_inserted: number }> {
   const res = await fetch(`${BASE}/ingest/alpha`, {
-    method: "POST",
-    headers: { "Content-Type": "text/csv" },
+    method: 'POST',
+    headers: { 'Content-Type': 'text/csv' },
     body: file,
   });
   if (!res.ok) {
@@ -392,8 +381,8 @@ export async function fetchAvailableMetrics(): Promise<MetricMeta[]> {
 
 export async function saveMetricVisibility(visibility: Record<string, boolean>): Promise<void> {
   const res = await fetch(`${BASE}/metrics/visibility`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(visibility),
   });
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
@@ -422,8 +411,8 @@ export async function fetchSourcePriority(): Promise<SourcePriorityConfig> {
 
 export async function saveSourcePriority(category: string, sources: string[]): Promise<void> {
   const res = await fetch(`${BASE}/source-priority`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ category, sources }),
   });
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
@@ -431,7 +420,7 @@ export async function saveSourcePriority(category: string, sources: string[]): P
 
 export async function deleteSourcePriority(category: string): Promise<void> {
   const res = await fetch(`${BASE}/source-priority/${encodeURIComponent(category)}`, {
-    method: "DELETE",
+    method: 'DELETE',
   });
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
 }
@@ -454,8 +443,8 @@ export async function fetchOuraStatus(): Promise<OuraStatus> {
 
 export async function saveOuraCredentials(clientId: string, clientSecret: string): Promise<void> {
   const res = await fetch(`${BASE}/oura/credentials`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ client_id: clientId, client_secret: clientSecret }),
   });
   if (!res.ok) {
@@ -465,17 +454,17 @@ export async function saveOuraCredentials(clientId: string, clientSecret: string
 }
 
 export async function authorizeOura(): Promise<{ authorize_url: string }> {
-  const res = await fetch(`${BASE}/oura/authorize`, { method: "POST" });
+  const res = await fetch(`${BASE}/oura/authorize`, { method: 'POST' });
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }
 
 export async function triggerOuraSync(): Promise<void> {
-  const res = await fetch(`${BASE}/oura/sync`, { method: "POST" });
+  const res = await fetch(`${BASE}/oura/sync`, { method: 'POST' });
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
 }
 
 export async function disconnectOura(): Promise<void> {
-  const res = await fetch(`${BASE}/oura/disconnect`, { method: "DELETE" });
+  const res = await fetch(`${BASE}/oura/disconnect`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
 }

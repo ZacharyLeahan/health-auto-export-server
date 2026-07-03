@@ -1,16 +1,16 @@
-import { Navigate, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
-import Layout from "./components/Layout";
-import ErrorBoundary from "./components/ErrorBoundary";
-import DashboardPage from "./pages/DashboardPage";
+import { Navigate, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
+import DashboardPage from './pages/DashboardPage';
 
-const SleepPage = lazy(() => import("./pages/SleepPage"));
-const GoalsPage = lazy(() => import("./pages/GoalsPage"));
-const CalendarPage = lazy(() => import("./pages/CalendarPage"));
-const WorkoutsPage = lazy(() => import("./pages/WorkoutsPage"));
-const WorkoutDetailPage = lazy(() => import("./pages/WorkoutDetailPage"));
-const CorrelationPage = lazy(() => import("./pages/CorrelationPage"));
-const TrendsPage = lazy(() => import("./pages/TrendsPage"));
+const SleepPage = lazy(() => import('./pages/SleepPage'));
+const GoalsPage = lazy(() => import('./pages/GoalsPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const WorkoutsPage = lazy(() => import('./pages/WorkoutsPage'));
+const WorkoutDetailPage = lazy(() => import('./pages/WorkoutDetailPage'));
+const CorrelationPage = lazy(() => import('./pages/CorrelationPage'));
+const TrendsPage = lazy(() => import('./pages/TrendsPage'));
 
 function PageFallback() {
   return (
@@ -36,9 +36,9 @@ export default function App() {
         <Route
           path="/"
           element={
-            <ErrorBoundary>
-              <DashboardPage />
-            </ErrorBoundary>
+            <Page>
+              <GoalsPage />
+            </Page>
           }
         />
         <Route
@@ -81,7 +81,7 @@ export default function App() {
             </Page>
           }
         />
-        <Route path="/metrics" element={<Navigate to="/" replace />} />
+        <Route path="/metrics" element={<Navigate to="/raw" replace />} />
         <Route
           path="/correlations"
           element={
@@ -95,6 +95,14 @@ export default function App() {
           element={
             <Page>
               <TrendsPage />
+            </Page>
+          }
+        />
+        <Route
+          path="/raw"
+          element={
+            <Page>
+              <DashboardPage />
             </Page>
           }
         />
