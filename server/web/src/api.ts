@@ -32,15 +32,6 @@ export interface TimeSeriesPoint {
   count: number;
 }
 
-export interface MetricStats {
-  metric: string;
-  avg: number | null;
-  min: number | null;
-  max: number | null;
-  stddev: number | null;
-  count: number;
-}
-
 export interface DailySum {
   MetricName: string;
   Units: string;
@@ -80,17 +71,6 @@ export async function fetchTimeSeries(
 ): Promise<TimeSeriesPoint[]> {
   const params = new URLSearchParams({ metric, start, end, agg });
   const res = await fetch(`${BASE}/timeseries?${params}`);
-  if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
-  return res.json();
-}
-
-export async function fetchMetricStats(
-  metric: string,
-  start: string,
-  end: string,
-): Promise<MetricStats> {
-  const params = new URLSearchParams({ metric, start, end });
-  const res = await fetch(`${BASE}/metrics/stats?${params}`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }
@@ -259,35 +239,67 @@ export async function fetchWorkoutSets(
   return res.json();
 }
 
-// --- Correlation ---
+// --- Move ---
 
-export interface CorrelationPoint {
-  time: string;
-  x: number | null;
-  y: number | null;
+export type MoveHourState =
+  | 'protected'
+  | 'missedStand'
+  | 'snackOverdue'
+  | 'bothMissed'
+  | 'future';
+
+export interface MoveHour {
+  hour: number;
+  label: string;
+  start: string;
+  end: string;
+  stood: boolean;
+  snackCovered: boolean;
+  snackWorkoutIds: string[];
+  workoutIds: string[];
+  state: MoveHourState;
 }
 
-export interface CorrelationResponse {
-  points: CorrelationPoint[];
-  pearson_r: number | null;
-  count: number;
+export interface MoveDay {
+  date: string;
+  score: number;
+  maxScore: number;
+  standHours: number;
+  snackCoveredHours: number;
+  snackBlocksMet: number;
+  realWorkoutBonus: number;
+  missedStandHours: number[];
+  longestMissedStandRun: number;
+  snackGaps: Array<{ start: string; end: string; hours: number }>;
+  hours: MoveHour[];
 }
 
-export async function fetchCorrelation(
-  xMetric: string,
-  yMetric: string,
-  start: string,
-  end: string,
-  bucket: string = '1 day',
-): Promise<CorrelationResponse> {
-  const params = new URLSearchParams({
-    x: xMetric,
-    y: yMetric,
-    start,
-    end,
-    bucket,
-  });
-  const res = await fetch(`${BASE}/correlation?${params}`);
+export interface MoveResponse {
+  generatedAt: string;
+  timezone: string;
+  window: { start: string; end: string; days: number };
+  activeHours: { startHour: number; endHour: number; snackCadenceHours: number };
+  score: {
+    today: number;
+    rolling: number;
+    max: number;
+    status: 'strong' | 'watch' | 'stale';
+  };
+  snackCadence: {
+    latestSnackWorkout: {
+      id: string;
+      name: string;
+      start: string;
+      durationSeconds: number;
+    } | null;
+    nextSnackDue: string;
+    overdue: boolean;
+  };
+  days: MoveDay[];
+}
+
+export async function fetchMoveWeekly(): Promise<MoveResponse> {
+  const res = await fetch(`${BASE}/move/weekly`);
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }

@@ -248,34 +248,6 @@ async function aggregateTimeSeries(
   }));
 }
 
-function stddev(values: number[]): number | null {
-  if (values.length < 2) return null;
-  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
-  const variance =
-    values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1);
-  return Math.sqrt(variance);
-}
-
-async function getScalarValues(name: string, start: Date, end: Date): Promise<number[]> {
-  const db = mongoose.connection.db;
-  if (!db) return [];
-
-  const kind = metricKind(name);
-  const docs = await db
-    .collection(name)
-    .find({ date: { $gte: start, $lte: end } })
-    .project({ qty: 1, Avg: 1, systolic: 1 })
-    .toArray();
-
-  return docs
-    .map((doc) => {
-      if (kind === 'heart_rate') return doc.Avg as number | undefined;
-      if (kind === 'blood_pressure') return doc.systolic as number | undefined;
-      return doc.qty as number | undefined;
-    })
-    .filter((value): value is number => typeof value === 'number' && !Number.isNaN(value));
-}
-
 router.get('/version', (_req: Request, res: Response) => {
   res.json({ version: 'health-auto-dashboard' });
 });
@@ -351,35 +323,6 @@ router.get('/timeseries', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('timeseries error:', error);
     res.status(500).json({ error: 'Failed to load time series' });
-  }
-});
-
-router.get('/metrics/stats', async (req: Request, res: Response) => {
-  try {
-    const metric = String(req.query.metric || '');
-    if (!metric) {
-      res.status(400).json({ error: 'metric parameter required' });
-      return;
-    }
-
-    const { start, end } = parseRange(req);
-    const values = await getScalarValues(metric, start, end);
-
-    if (values.length === 0) {
-      res.json({ metric, avg: null, min: null, max: null, stddev: null, count: 0 });
-      return;
-    }
-
-    res.json({
-      metric,
-      avg: values.reduce((sum, value) => sum + value, 0) / values.length,
-      min: Math.min(...values),
-      max: Math.max(...values),
-      stddev: stddev(values),
-      count: values.length,
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load metric stats' });
   }
 });
 
