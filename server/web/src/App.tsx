@@ -9,8 +9,7 @@ const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const WorkoutsPage = lazy(() => import('./pages/WorkoutsPage'));
 const WorkoutDetailPage = lazy(() => import('./pages/WorkoutDetailPage'));
-const CorrelationPage = lazy(() => import('./pages/CorrelationPage'));
-const TrendsPage = lazy(() => import('./pages/TrendsPage'));
+const MovePage = lazy(() => import('./pages/MovePage'));
 
 function PageFallback() {
   return (
@@ -81,23 +80,15 @@ export default function App() {
             </Page>
           }
         />
+        <Route
+          path="/move"
+          element={
+            <Page>
+              <MovePage />
+            </Page>
+          }
+        />
         <Route path="/metrics" element={<Navigate to="/raw" replace />} />
-        <Route
-          path="/correlations"
-          element={
-            <Page>
-              <CorrelationPage />
-            </Page>
-          }
-        />
-        <Route
-          path="/trends"
-          element={
-            <Page>
-              <TrendsPage />
-            </Page>
-          }
-        />
         <Route
           path="/raw"
           element={

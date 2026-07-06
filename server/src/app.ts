@@ -9,6 +9,7 @@ import dashboardRouter from './routes/dashboard';
 import fitnessGoalsRouter from './routes/fitnessGoals';
 import ingesterRouter from './routes/ingester';
 import metricsRouter from './routes/metrics';
+import moveRouter from './routes/move';
 import workoutsRouter from './routes/workouts';
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/metrics', metricsRouter);
 app.use('/api/workouts', workoutsRouter);
 app.use('/dashboard/api/v1', dashboardRouter);
 app.use('/dashboard/api/v1', fitnessGoalsRouter);
+app.use('/dashboard/api/v1', moveRouter);
 
 const webDistPath = path.join(__dirname, '../web/dist');
 app.use('/dashboard', express.static(webDistPath));
